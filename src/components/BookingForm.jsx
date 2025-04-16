@@ -121,7 +121,7 @@ const BookingForm = () => {
   const maxDateStr = maxDate.toISOString().split('T')[0];
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-lg p-6">
       {message.text && (
         <div
           className={`mb-6 p-4 rounded-md ${
@@ -137,7 +137,7 @@ const BookingForm = () => {
           {/* Date Selection */}
           <div>
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <Calendar className="mr-2" size={18} />
+              <Calendar className="mr-2 text-primary" size={18} />
               Date
             </label>
             <input
@@ -146,7 +146,7 @@ const BookingForm = () => {
               onChange={(e) => setDate(e.target.value)}
               min={today}
               max={maxDateStr}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               required
             />
           </div>
@@ -154,13 +154,13 @@ const BookingForm = () => {
           {/* Party Size */}
           <div>
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <User className="mr-2" size={18} />
+              <User className="mr-2 text-primary" size={18} />
               Number of Guests
             </label>
             <select
               value={guests}
               onChange={(e) => setGuests(parseInt(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               required
             >
               {[1, 2, 3, 4, 5, 6].map(num => (
@@ -173,7 +173,7 @@ const BookingForm = () => {
           {/* Time Selection */}
           <div className="md:col-span-2">
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <Clock className="mr-2" size={18} />
+              <Clock className="mr-2 text-primary" size={18} />
               Select a Time
             </label>
 
@@ -197,8 +197,8 @@ const BookingForm = () => {
                       htmlFor={`time-${timeSlot.value}`}
                       className={`block text-center p-2 rounded-md cursor-pointer border transition-colors
                         ${time === timeSlot.value
-                          ? 'bg-orange-500 text-white border-orange-500'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-orange-300'}`}
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary hover:text-primary'}`}
                     >
                       <div>{timeSlot.label}</div>
                       <div className="text-xs mt-1">Until {timeSlot.endTime}</div>
@@ -216,42 +216,42 @@ const BookingForm = () => {
           {/* Contact Information */}
           <div>
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <User className="mr-2" size={18} />
+              <User className="mr-2 text-primary" size={18} />
               Full Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               required
             />
           </div>
 
           <div>
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <Mail className="mr-2" size={18} />
+              <Mail className="mr-2 text-primary" size={18} />
               Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               required
             />
           </div>
 
           <div className="md:col-span-2">
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <Phone className="mr-2" size={18} />
+              <Phone className="mr-2 text-primary" size={18} />
               Phone Number
             </label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               required
             />
           </div>
@@ -259,13 +259,13 @@ const BookingForm = () => {
           {/* Special Requests */}
           <div className="md:col-span-2">
             <label className="block text-gray-700 font-medium mb-2 flex items-center">
-              <AlignJustify className="mr-2" size={18} />
+              <AlignJustify className="mr-2 text-primary" size={18} />
               Special Requests (optional)
             </label>
             <textarea
               value={specialRequests}
               onChange={(e) => setSpecialRequests(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               rows={3}
             ></textarea>
           </div>
@@ -274,8 +274,7 @@ const BookingForm = () => {
         <div className="mt-8 text-center">
           <button
             type="submit"
-            className="w-full md:w-auto px-6 py-3 rounded-md text-white font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#FF5733' }}
+            className="w-full md:w-auto px-6 py-3 rounded-md text-white font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed bg-primary hover:bg-primary-dark transition-colors"
             disabled={isLoading || !time || availableTimes.length === 0}
           >
             {isLoading ? 'Processing...' : 'Confirm Reservation'}

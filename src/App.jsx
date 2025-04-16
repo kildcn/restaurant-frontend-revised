@@ -6,23 +6,28 @@ const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is authenticated
+  // Add a simple way to determine if we should show admin directly
   useEffect(() => {
-    // In a real app, this would verify authentication status
-    const token = localStorage.getItem('authToken');
-    if (token) {
+    // Check URL parameters for admin access
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('admin')) {
+      setCurrentPage('admin');
       setIsAuthenticated(true);
-
-      // If trying to access admin and already authenticated, show admin dashboard
-      if (window.location.pathname.includes('admin')) {
-        setCurrentPage('admin');
+    } else {
+      // Original authentication check
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        setIsAuthenticated(true);
+        if (window.location.pathname.includes('admin')) {
+          setCurrentPage('admin');
+        }
       }
     }
   }, []);
 
   // Simple login handler for demo
   const handleLogin = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     // In a real app, this would make an API call
     localStorage.setItem('authToken', 'demo-token');
     setIsAuthenticated(true);
@@ -61,6 +66,17 @@ const App = () => {
 
   return (
     <div className="app">
+      {/* Add a simple admin access button for testing */}
+      {currentPage === 'home' && (
+        <div className="fixed top-4 right-4 z-50">
+          <button
+            onClick={handleLogin}
+            className="px-3 py-1 bg-primary text-white rounded-md shadow-md hover:bg-primary-dark transition-colors"
+          >
+            Admin Access
+          </button>
+        </div>
+      )}
       {renderPage()}
     </div>
   );
@@ -88,7 +104,7 @@ const LoginPage = ({ onLogin }) => {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -102,7 +118,7 @@ const LoginPage = ({ onLogin }) => {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -113,8 +129,7 @@ const LoginPage = ({ onLogin }) => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-              style={{ backgroundColor: '#FF5733' }}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >
               Sign in
             </button>

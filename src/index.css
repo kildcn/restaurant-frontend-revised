@@ -7,63 +7,60 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #FF5733;
-  --primary-dark: #E64A2A;
-  --primary-light: #FF7E66;
+  --primary-color: #b22222; /* Firebrick red */
+  --primary-dark: #8c1a1a;
+  --primary-light: #d45c5c;
   --text-color: #333333;
   --bg-color: #FFFFFF;
   --secondary-bg: #F9F9F9;
 }
 
-body {
-  margin: 0;
-  font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: var(--text-color);
-  background-color: var(--bg-color);
+@layer base {
+  body {
+    @apply font-sans text-gray-800 bg-white;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', serif;
-}
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-md font-medium transition-colors hover:bg-primary-dark;
+  }
 
-.btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
+  .btn-secondary {
+    @apply bg-transparent text-primary border border-primary px-4 py-2 rounded-md font-medium transition-colors hover:bg-primary-light hover:text-white;
+  }
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-}
+  .section-heading {
+    @apply relative pb-2 mb-6;
+  }
 
-.btn-secondary {
-  background-color: transparent;
-  color: var(--primary-color);
-  border: 1px solid var(--primary-color);
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
+  .section-heading:after {
+    content: '';
+    @apply absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-0.5 bg-primary;
+  }
 
-.btn-secondary:hover {
-  background-color: var(--primary-light);
-  color: white;
-}
+  /* Status colors with proper Tailwind classes */
+  .status-pending { @apply bg-yellow-100 text-yellow-800; }
+  .status-confirmed { @apply bg-blue-100 text-blue-800; }
+  .status-seated { @apply bg-green-100 text-green-800; }
+  .status-completed { @apply bg-indigo-100 text-indigo-800; }
+  .status-cancelled { @apply bg-red-100 text-red-800; }
+  .status-no-show { @apply bg-gray-100 text-gray-800; }
 
-/* Custom styling for form elements */
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 1px var(--primary-color);
+  /* Table related styling */
+  .table-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4;
+  }
+
+  .table-item {
+    @apply aspect-square rounded-full flex items-center justify-center font-bold cursor-pointer transition-transform hover:scale-105;
+  }
 }
 
 /* Animation for page transitions */
@@ -81,51 +78,3 @@ textarea:focus {
     transform: translateY(0);
   }
 }
-
-/* Restaurant styling */
-.section-heading {
-  position: relative;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-heading:after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background-color: var(--primary-color);
-}
-
-/* Table grid styling */
-.table-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-  gap: 1rem;
-}
-
-.table-item {
-  aspect-ratio: 1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.table-item:hover {
-  transform: scale(1.05);
-}
-
-/* Status colors */
-.status-pending { background-color: #FEF3C7; color: #92400E; }
-.status-confirmed { background-color: #DBEAFE; color: #1E40AF; }
-.status-seated { background-color: #D1FAE5; color: #065F46; }
-.status-completed { background-color: #E0E7FF; color: #3730A3; }
-.status-cancelled { background-color: #FEE2E2; color: #B91C1C; }
-.status-no-show { background-color: #F3F4F6; color: #4B5563; }

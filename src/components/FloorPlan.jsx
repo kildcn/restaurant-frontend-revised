@@ -143,13 +143,13 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
   return (
     <div>
       <div className="mb-6 flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Floor Plan</h3>
+        <h3 className="text-xl font-semibold">Floor Plan</h3>
         <div className="flex space-x-6">
           <div className="flex items-center text-sm">
-            <Clock size={16} className="mr-1" />
+            <Clock size={16} className="mr-1 text-primary" />
             <span>Current time: {currentTime}</span>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-3">
             <div className="flex items-center">
               <div className="w-4 h-4 rounded-full mr-1" style={{ backgroundColor: '#E5E7EB' }}></div>
               <span className="text-xs">Available</span>
@@ -175,7 +175,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
           <span>Loading floor plan...</span>
         </div>
       ) : (
-        <div className="flex">
+        <div className="flex flex-col md:flex-row gap-4">
           {/* Floor Plan */}
           <div className="flex-1 border border-gray-200 rounded-lg bg-white p-4 relative" style={{ minHeight: '500px' }}>
             {/* Indoor section label */}
@@ -184,7 +184,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
             </div>
 
             {/* Outdoor section label */}
-            <div className="absolute top-380px left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
+            <div className="absolute top-[380px] left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
               Outdoor Area (5 tables)
             </div>
 
@@ -197,8 +197,8 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
               return (
                 <div
                   key={table.id}
-                  className={`absolute flex items-center justify-center cursor-pointer transition-all ${
-                    selectedTable && selectedTable.id === table.id ? 'ring-2 ring-offset-2 ring-orange-500' : ''
+                  className={`absolute flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                    selectedTable && selectedTable.id === table.id ? 'ring-2 ring-offset-2 ring-primary' : ''
                   }`}
                   style={{
                     left: `${table.x}px`,
@@ -208,7 +208,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                     backgroundColor: color,
                     color: textColor,
                     borderRadius: table.shape === 'round' ? '50%' : '4px',
-                    border: isGrouped ? '2px dashed #FF5733' : 'none',
+                    border: isGrouped ? '2px dashed #b22222' : 'none',
                     zIndex: selectedTable && selectedTable.id === table.id ? 50 : 10
                   }}
                   onClick={() => handleTableClick(table)}
@@ -251,7 +251,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                       top: `${y1}px`,
                       width: `${length}px`,
                       height: '2px',
-                      backgroundColor: '#FF5733',
+                      backgroundColor: '#b22222',
                       transform: `rotate(${angle}deg)`,
                       zIndex: 5
                     }}
@@ -262,10 +262,10 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
           </div>
 
           {/* Details Panel */}
-          <div className="w-80 ml-4">
+          <div className="w-full md:w-80">
             {selectedTable ? (
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold mb-2 flex items-center justify-between">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-md">
+                <h4 className="font-semibold mb-2 flex items-center justify-between border-b border-gray-200 pb-2">
                   <span>Table {selectedTable.tableNumber}</span>
                   <button
                     onClick={() => setSelectedTable(null)}
@@ -277,11 +277,11 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
                 <div className="text-sm">
                   <div className="flex items-center mb-1">
-                    <User size={14} className="mr-1" />
+                    <User size={14} className="mr-1 text-primary" />
                     <span>Capacity: {selectedTable.capacity} guests</span>
                   </div>
                   <div className="flex items-center mb-1">
-                    <span>Section: {selectedTable.section}</span>
+                    <span className="capitalize">Section: {selectedTable.section}</span>
                   </div>
                 </div>
 
@@ -293,11 +293,11 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                         <div className="mb-2">
                           <p className="font-medium">{selectedBooking.customer.name}</p>
                           <div className="flex items-center text-xs text-gray-600">
-                            <Mail size={12} className="mr-1" />
+                            <Mail size={12} className="mr-1 text-primary" />
                             <span>{selectedBooking.customer.email}</span>
                           </div>
                           <div className="flex items-center text-xs text-gray-600">
-                            <Phone size={12} className="mr-1" />
+                            <Phone size={12} className="mr-1 text-primary" />
                             <span>{selectedBooking.customer.phone}</span>
                           </div>
                         </div>
@@ -326,7 +326,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                             <select
                               value={selectedBooking.status}
                               onChange={(e) => updateBookingStatus(selectedBooking.id, e.target.value)}
-                              className="w-full p-1 border border-gray-300 rounded text-sm"
+                              className="w-full p-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                             >
                               <option value="pending">Pending</option>
                               <option value="confirmed">Confirm</option>
@@ -357,8 +357,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                     <div className="text-center py-3 text-gray-500">
                       <p>No current booking for this table</p>
                       <button
-                        className="mt-2 px-3 py-1 text-sm rounded text-white"
-                        style={{ backgroundColor: '#FF5733' }}
+                        className="mt-2 px-3 py-1 text-sm rounded text-white bg-primary hover:bg-primary-dark transition-colors"
                       >
                         Create Booking
                       </button>
@@ -367,7 +366,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white border border-gray-200 rounded-lg p-4 text-center py-8">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 text-center py-8 shadow-md">
                 <Menu size={24} className="mx-auto mb-2 text-gray-400" />
                 <p className="text-gray-500">Select a table to see details</p>
               </div>

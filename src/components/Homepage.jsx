@@ -17,15 +17,14 @@ const Homepage = () => {
       {/* Hero Section */}
       <div className="relative flex items-center justify-center h-96 text-white text-center px-4"
            style={{
-             background: 'linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(/api/placeholder/1200/800) center/cover no-repeat'
+             background: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(/api/placeholder/1200/800) center/cover no-repeat'
            }}>
         <div className="max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">L'Eustache</h1>
           <p className="text-xl mb-6">A casual French bistro with organic, local and seasonal cuisine</p>
           <button
             onClick={handleBookingClick}
-            className="px-6 py-3 rounded-md text-white font-medium text-lg shadow-lg"
-            style={{ backgroundColor: '#FF5733' }}
+            className="px-6 py-3 rounded-md text-white font-medium text-lg shadow-lg bg-primary hover:bg-primary-dark transition-colors"
           >
             Reserve a Table
           </button>
@@ -36,7 +35,7 @@ const Homepage = () => {
       <div className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4" style={{ color: '#FF5733' }}>Welcome to L'Eustache</h2>
+            <h2 className="text-3xl font-bold mb-4 text-primary">Welcome to L'Eustache</h2>
             <p className="text-xl mb-4 max-w-3xl mx-auto">
               We are a casual French bistro with an organic, local and seasonal cuisine accompanied by living wines!
             </p>
@@ -47,9 +46,9 @@ const Homepage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
               <div className="flex justify-center mb-4">
-                <Users size={40} style={{ color: '#FF5733' }} />
+                <Users size={40} className="text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Seasonal Cuisine</h3>
               <p>
@@ -57,9 +56,9 @@ const Homepage = () => {
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
               <div className="flex justify-center mb-4">
-                <Clock size={40} style={{ color: '#FF5733' }} />
+                <Clock size={40} className="text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Opening Hours</h3>
               <p>
@@ -69,9 +68,9 @@ const Homepage = () => {
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
               <div className="flex justify-center mb-4">
-                <MapPin size={40} style={{ color: '#FF5733' }} />
+                <MapPin size={40} className="text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Find Us</h3>
               <p>
@@ -88,7 +87,7 @@ const Homepage = () => {
       {showBooking && (
         <div id="booking-section" className="py-16 px-4 bg-gray-50">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-8" style={{ color: '#FF5733' }}>Make a Reservation</h2>
+            <h2 className="text-3xl font-bold text-center mb-8 text-primary">Make a Reservation</h2>
             <BookingForm />
           </div>
         </div>

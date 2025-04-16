@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, LogOut, User, Settings, List, Grid, Search } from 'lucide-react';
 import FloorPlan from './FloorPlan';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ onLogout }) => {
   const [activeView, setActiveView] = useState('bookings');
   const [bookings, setBookings] = useState([]);
   const [date, setDate] = useState('');
@@ -144,40 +144,55 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <div className="w-64 bg-gray-900 text-white flex-shrink-0">
-        <div className="p-4 border-b border-gray-800">
-          <h1 className="text-xl font-bold">L'Eustache</h1>
+        <div className="p-6 border-b border-gray-800">
+          <h1 className="text-2xl font-bold">L'Eustache</h1>
           <p className="text-gray-400 text-sm">Admin Dashboard</p>
         </div>
 
         <nav className="p-4">
           <button
             onClick={() => setActiveView('bookings')}
-            className={`flex items-center w-full mb-4 p-2 rounded-md ${activeView === 'bookings' ? 'bg-gray-800' : 'hover:bg-gray-800'}`}
+            className={`flex items-center w-full mb-4 p-3 rounded-md transition-colors ${
+              activeView === 'bookings'
+                ? 'bg-primary text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
           >
-            <List className="mr-2" size={18} />
+            <List className="mr-3" size={18} />
             <span>Bookings</span>
           </button>
 
           <button
             onClick={() => setActiveView('floorplan')}
-            className={`flex items-center w-full mb-4 p-2 rounded-md ${activeView === 'floorplan' ? 'bg-gray-800' : 'hover:bg-gray-800'}`}
+            className={`flex items-center w-full mb-4 p-3 rounded-md transition-colors ${
+              activeView === 'floorplan'
+                ? 'bg-primary text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
           >
-            <Grid className="mr-2" size={18} />
+            <Grid className="mr-3" size={18} />
             <span>Floor Plan</span>
           </button>
 
           <button
             onClick={() => setActiveView('settings')}
-            className={`flex items-center w-full mb-4 p-2 rounded-md ${activeView === 'settings' ? 'bg-gray-800' : 'hover:bg-gray-800'}`}
+            className={`flex items-center w-full mb-4 p-3 rounded-md transition-colors ${
+              activeView === 'settings'
+                ? 'bg-primary text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
           >
-            <Settings className="mr-2" size={18} />
+            <Settings className="mr-3" size={18} />
             <span>Settings</span>
           </button>
         </nav>
 
         <div className="p-4 mt-auto border-t border-gray-800">
-          <button className="flex items-center w-full p-2 rounded-md hover:bg-gray-800">
-            <LogOut className="mr-2" size={18} />
+          <button
+            onClick={onLogout}
+            className="flex items-center w-full p-3 rounded-md text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            <LogOut className="mr-3" size={18} />
             <span>Logout</span>
           </button>
         </div>
@@ -186,9 +201,9 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white shadow p-4">
+        <header className="bg-white shadow p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-2xl font-display font-semibold text-gray-800">
               {activeView === 'bookings' && 'Manage Bookings'}
               {activeView === 'floorplan' && 'Floor Plan'}
               {activeView === 'settings' && 'Settings'}
@@ -196,16 +211,16 @@ const AdminDashboard = () => {
 
             <div className="flex items-center">
               <div className="flex items-center mr-4">
-                <Calendar className="mr-2" size={18} />
+                <Calendar className="mr-2 text-primary" size={20} />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="p-2 border border-gray-300 rounded-md"
+                  className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 />
               </div>
 
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 font-medium">
                 {new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </div>
             </div>
@@ -222,7 +237,7 @@ const AdminDashboard = () => {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-md"
+                    className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   >
                     <option value="all">All Statuses</option>
                     <option value="pending">Pending</option>
@@ -233,7 +248,7 @@ const AdminDashboard = () => {
                     <option value="no-show">No Show</option>
                   </select>
 
-                  <div className="text-sm">
+                  <div className="text-sm font-medium">
                     {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
                   </div>
                 </div>
@@ -245,7 +260,7 @@ const AdminDashboard = () => {
                     placeholder="Search bookings..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 p-2 w-full border border-gray-300 rounded-md"
+                    className="pl-10 p-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   />
                 </div>
               </div>
@@ -254,7 +269,7 @@ const AdminDashboard = () => {
               {isLoading ? (
                 <div className="text-center py-12">Loading bookings...</div>
               ) : filteredBookings.length > 0 ? (
-                <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="bg-white shadow-lg rounded-lg overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -313,7 +328,7 @@ const AdminDashboard = () => {
                             <select
                               value={booking.status}
                               onChange={(e) => updateBookingStatus(booking.id, e.target.value)}
-                              className="p-1 border border-gray-300 rounded-md text-sm"
+                              className="p-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                             >
                               <option value="pending">Pending</option>
                               <option value="confirmed">Confirm</option>
@@ -329,7 +344,7 @@ const AdminDashboard = () => {
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-12 bg-white shadow rounded-lg">
+                <div className="text-center py-12 bg-white shadow-lg rounded-lg">
                   <p className="text-gray-500">No bookings found for the selected date and filters.</p>
                 </div>
               )}
@@ -338,7 +353,7 @@ const AdminDashboard = () => {
 
           {activeView === 'floorplan' && (
             <div>
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-lg rounded-lg p-6">
                 <FloorPlan
                   date={date}
                   bookings={bookings}
@@ -349,9 +364,51 @@ const AdminDashboard = () => {
           )}
 
           {activeView === 'settings' && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">Restaurant Settings</h3>
+            <div className="bg-white shadow-lg rounded-lg p-6">
+              <h3 className="text-xl font-semibold mb-4">Restaurant Settings</h3>
               <p className="text-gray-500">Settings functionality would be implemented here.</p>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Opening Hours</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Wednesday:</span>
+                      <span>6:00 PM - 11:45 PM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Thursday:</span>
+                      <span>6:00 PM - 11:45 PM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Friday:</span>
+                      <span>6:00 PM - 11:45 PM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Saturday:</span>
+                      <span>6:00 PM - 11:45 PM</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Booking Rules</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Time slot duration:</span>
+                      <span>2 hours</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Max party size:</span>
+                      <span>6 guests</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Advance booking:</span>
+                      <span>30 days</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </main>
