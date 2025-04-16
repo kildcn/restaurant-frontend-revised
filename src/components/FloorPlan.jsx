@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, Mail, Phone, Menu } from 'lucide-react';
+import apiService from '../services/api';
 
 const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
   const [floorPlanData, setFloorPlanData] = useState([]);
@@ -9,6 +10,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log("Date changed:", date);
     fetchFloorPlanData();
 
     // Set current time in HH:MM format
@@ -20,48 +22,81 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
   const fetchFloorPlanData = async () => {
     setIsLoading(true);
+    console.log("Fetching floor plan data...");
 
-    // This would be an API call in a real implementation
-    // Simulating API call with static data
-    setTimeout(() => {
-      // Create mock floor plan data with tables
-      const mockTables = [
-        // Indoor tables (2-seaters)
-        { id: 'A1', tableNumber: 'A1', capacity: 2, section: 'indoor', shape: 'round', x: 100, y: 100, width: 60, height: 60 },
-        { id: 'A2', tableNumber: 'A2', capacity: 2, section: 'indoor', shape: 'round', x: 100, y: 180, width: 60, height: 60 },
-        { id: 'A3', tableNumber: 'A3', capacity: 2, section: 'indoor', shape: 'round', x: 180, y: 100, width: 60, height: 60 },
-        { id: 'A4', tableNumber: 'A4', capacity: 2, section: 'indoor', shape: 'round', x: 180, y: 180, width: 60, height: 60 },
-        { id: 'A5', tableNumber: 'A5', capacity: 2, section: 'indoor', shape: 'round', x: 260, y: 100, width: 60, height: 60 },
-        { id: 'A6', tableNumber: 'A6', capacity: 2, section: 'indoor', shape: 'round', x: 260, y: 180, width: 60, height: 60 },
-        { id: 'A7', tableNumber: 'A7', capacity: 2, section: 'indoor', shape: 'round', x: 340, y: 100, width: 60, height: 60 },
-        { id: 'A8', tableNumber: 'A8', capacity: 2, section: 'indoor', shape: 'round', x: 340, y: 180, width: 60, height: 60 },
-        { id: 'A9', tableNumber: 'A9', capacity: 2, section: 'indoor', shape: 'round', x: 420, y: 100, width: 60, height: 60 },
-        { id: 'A10', tableNumber: 'A10', capacity: 2, section: 'indoor', shape: 'round', x: 420, y: 180, width: 60, height: 60 },
-        { id: 'A11', tableNumber: 'A11', capacity: 2, section: 'indoor', shape: 'round', x: 100, y: 280, width: 60, height: 60 },
-        { id: 'A12', tableNumber: 'A12', capacity: 2, section: 'indoor', shape: 'round', x: 180, y: 280, width: 60, height: 60 },
-        { id: 'A13', tableNumber: 'A13', capacity: 2, section: 'indoor', shape: 'round', x: 260, y: 280, width: 60, height: 60 },
-        { id: 'A14', tableNumber: 'A14', capacity: 2, section: 'indoor', shape: 'round', x: 340, y: 280, width: 60, height: 60 },
-        { id: 'A15', tableNumber: 'A15', capacity: 2, section: 'indoor', shape: 'round', x: 420, y: 280, width: 60, height: 60 },
+    try {
+      const response = await apiService.tables.getTables();
+      console.log("Tables response:", response);
 
-        // Outdoor tables (2-seaters)
-        { id: 'O1', tableNumber: 'O1', capacity: 2, section: 'outdoor', shape: 'round', x: 100, y: 400, width: 60, height: 60 },
-        { id: 'O2', tableNumber: 'O2', capacity: 2, section: 'outdoor', shape: 'round', x: 180, y: 400, width: 60, height: 60 },
-        { id: 'O3', tableNumber: 'O3', capacity: 2, section: 'outdoor', shape: 'round', x: 260, y: 400, width: 60, height: 60 },
-        { id: 'O4', tableNumber: 'O4', capacity: 2, section: 'outdoor', shape: 'round', x: 340, y: 400, width: 60, height: 60 },
-        { id: 'O5', tableNumber: 'O5', capacity: 2, section: 'outdoor', shape: 'round', x: 420, y: 400, width: 60, height: 60 },
-      ];
+      if (response.success) {
+        // Create a mock floor plan with positions for each table
+        const tablesWithPositions = assignTablePositions(response.data);
+        console.log("Tables with positions:", tablesWithPositions);
+        setFloorPlanData(tablesWithPositions);
+      } else {
+        console.error("Error fetching tables:", response.error);
+        setFloorPlanData([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchFloorPlanData:", error);
+      setFloorPlanData([]);
+    }
 
-      setFloorPlanData(mockTables);
-      setIsLoading(false);
-    }, 600);
+    setIsLoading(false);
+  };
+
+  // Function to assign positions to tables
+  const assignTablePositions = (tables) => {
+    if (!tables || !tables.length) {
+      console.warn("No tables data received");
+      return [];
+    }
+
+    // Sort tables to ensure consistent layout
+    const sortedTables = [...tables].sort((a, b) => {
+      const aNum = parseInt(a.tableNumber.replace(/\D/g, ''));
+      const bNum = parseInt(b.tableNumber.replace(/\D/g, ''));
+      return aNum - bNum;
+    });
+
+    const indoorTables = sortedTables.filter(t => t.section === 'indoor');
+    const outdoorTables = sortedTables.filter(t => t.section === 'outdoor');
+
+    // Calculate positions for indoor tables in a grid layout
+    const positionedIndoor = indoorTables.map((table, index) => {
+      // Create a grid layout with 5 columns
+      const row = Math.floor(index / 5);
+      const col = index % 5;
+      return {
+        ...table,
+        x: 100 + (col * 80),  // x position based on column
+        y: 100 + (row * 80),  // y position based on row
+        width: 60,
+        height: 60
+      };
+    });
+
+    // Calculate positions for outdoor tables in a row
+    const positionedOutdoor = outdoorTables.map((table, index) => {
+      return {
+        ...table,
+        x: 100 + (index * 80),  // Position horizontally
+        y: 400,                 // All outdoor tables at the bottom
+        width: 60,
+        height: 60
+      };
+    });
+
+    return [...positionedIndoor, ...positionedOutdoor];
   };
 
   const handleTableClick = (table) => {
+    console.log("Table clicked:", table);
     setSelectedTable(table);
 
     // Find booking associated with this table
-    const tableBooking = bookings.find(booking =>
-      booking.tables.some(t => t.id === table.id)
+    const tableBooking = bookings && bookings.find(booking =>
+      booking.tables && booking.tables.some(t => t._id === table._id)
     );
 
     setSelectedBooking(tableBooking || null);
@@ -76,8 +111,13 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
   // Get table status and color based on bookings
   const getTableStatus = (tableId) => {
+    // Default status if no bookings array is provided
+    if (!bookings || !bookings.length) {
+      return { status: 'available', color: '#E5E7EB', textColor: '#111827' };
+    }
+
     const tableBooking = bookings.find(booking =>
-      booking.tables.some(t => t.id === tableId)
+      booking.tables && booking.tables.some(t => t._id === tableId)
     );
 
     if (!tableBooking) {
@@ -134,11 +174,15 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
   // Find tables that are part of the same booking
   const getGroupedTables = (tableId) => {
-    const booking = bookings.find(b => b.tables.some(t => t.id === tableId));
-    if (!booking || booking.tables.length <= 1) return [];
+    if (!bookings || !bookings.length) return [];
 
-    return booking.tables.map(t => t.id).filter(id => id !== tableId);
+    const booking = bookings.find(b => b.tables && b.tables.some(t => t._id === tableId));
+    if (!booking || !booking.tables || booking.tables.length <= 1) return [];
+
+    return booking.tables.map(t => t._id).filter(id => id !== tableId);
   };
+
+  console.log("Current floorPlanData:", floorPlanData);
 
   return (
     <div>
@@ -178,27 +222,34 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
         <div className="flex flex-col md:flex-row gap-4">
           {/* Floor Plan */}
           <div className="flex-1 border border-gray-200 rounded-lg bg-white p-4 relative" style={{ minHeight: '500px' }}>
+            {/* Debug info */}
+            {floorPlanData.length === 0 && (
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400">
+                No table data available
+              </div>
+            )}
+
             {/* Indoor section label */}
             <div className="absolute top-2 left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
-              Indoor Area (15 tables)
+              Indoor Area ({floorPlanData.filter(t => t.section === 'indoor').length} tables)
             </div>
 
             {/* Outdoor section label */}
             <div className="absolute top-[380px] left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
-              Outdoor Area (5 tables)
+              Outdoor Area ({floorPlanData.filter(t => t.section === 'outdoor').length} tables)
             </div>
 
             {/* Tables */}
             {floorPlanData.map(table => {
-              const { status, color, textColor } = getTableStatus(table.id);
-              const groupedTables = getGroupedTables(table.id);
+              const { status, color, textColor } = getTableStatus(table._id);
+              const groupedTables = getGroupedTables(table._id);
               const isGrouped = groupedTables.length > 0;
 
               return (
                 <div
-                  key={table.id}
+                  key={table._id}
                   className={`absolute flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                    selectedTable && selectedTable.id === table.id ? 'ring-2 ring-offset-2 ring-primary' : ''
+                    selectedTable && selectedTable._id === table._id ? 'ring-2 ring-offset-2 ring-primary' : ''
                   }`}
                   style={{
                     left: `${table.x}px`,
@@ -209,7 +260,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                     color: textColor,
                     borderRadius: table.shape === 'round' ? '50%' : '4px',
                     border: isGrouped ? '2px dashed #b22222' : 'none',
-                    zIndex: selectedTable && selectedTable.id === table.id ? 50 : 10
+                    zIndex: selectedTable && selectedTable._id === table._id ? 50 : 10
                   }}
                   onClick={() => handleTableClick(table)}
                 >
@@ -220,16 +271,16 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
             {/* Connection lines for grouped tables */}
             {floorPlanData.map(table => {
-              const groupedTables = getGroupedTables(table.id);
+              const groupedTables = getGroupedTables(table._id);
 
               // Only draw lines from the first table in each group to avoid duplicates
               const isFirstInGroup = groupedTables.length > 0 &&
-                table.id < Math.min(...groupedTables);
+                table._id < Math.min(...groupedTables);
 
               if (!isFirstInGroup) return null;
 
               return groupedTables.map(groupedId => {
-                const groupedTable = floorPlanData.find(t => t.id === groupedId);
+                const groupedTable = floorPlanData.find(t => t._id === groupedId);
                 if (!groupedTable) return null;
 
                 // Calculate line position
@@ -244,7 +295,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
                 return (
                   <div
-                    key={`${table.id}-${groupedId}`}
+                    key={`${table._id}-${groupedId}`}
                     className="absolute origin-left"
                     style={{
                       left: `${x1}px`,
@@ -325,7 +376,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                           <div className="mt-1">
                             <select
                               value={selectedBooking.status}
-                              onChange={(e) => updateBookingStatus(selectedBooking.id, e.target.value)}
+                              onChange={(e) => updateBookingStatus(selectedBooking._id, e.target.value)}
                               className="w-full p-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                             >
                               <option value="pending">Pending</option>
@@ -341,9 +392,9 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                         <div className="border-t border-gray-200 pt-2 mt-3">
                           <p className="text-xs text-gray-600">Assigned Tables</p>
                           <div className="mt-1 flex flex-wrap gap-1">
-                            {selectedBooking.tables.map(table => (
+                            {selectedBooking.tables && selectedBooking.tables.map(table => (
                               <span
-                                key={table.id}
+                                key={table._id}
                                 className="px-2 py-1 bg-gray-100 text-xs rounded"
                               >
                                 {table.tableNumber}

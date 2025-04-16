@@ -134,10 +134,42 @@ const apiService = {
     // Public lookup for customers (no auth required)
     lookupBooking: async (reference, email) => {
       try {
-        const response = await apiClient.post('/bookings/lookup', { reference, email });
-        return { success: true, booking: response.data.data };
+        console.log('Looking up booking with:', { reference, email });
+
+        if (!reference || !email) {
+          return {
+            success: false,
+            error: 'Please provide both reference number and email'
+          };
+        }
+
+        // Make sure we have proper content-type headers
+        const response = await apiClient.post(
+          '/bookings/lookup',
+          { reference, email },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        console.log('Lookup response:', response.data);
+
+        if (response.data && response.data.success) {
+          return { success: true, booking: response.data.data };
+        } else {
+          return {
+            success: false,
+            error: response.data?.message || 'Booking not found'
+          };
+        }
       } catch (error) {
-        return { success: false, error: getErrorMessage(error) };
+        console.error('Error looking up booking:', error.response?.data || error.message);
+        return {
+          success: false,
+          error: getErrorMessage(error)
+        };
       }
     },
 

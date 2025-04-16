@@ -45,7 +45,12 @@ const AdminDashboard = ({ onLogout }) => {
       const response = await apiService.bookings.getBookings(date, statusFilter !== 'all' ? statusFilter : '', page, 10);
 
       if (response.success) {
-        setBookings(response.data);
+        // Sort bookings by start time
+        const sortedBookings = response.data.sort((a, b) => {
+          return new Date(a.timeSlot.start) - new Date(b.timeSlot.start);
+        });
+
+        setBookings(sortedBookings);
         setTotalPages(Math.ceil(response.count / 10));
         setTotalBookings(response.count);
       } else {
@@ -58,6 +63,79 @@ const AdminDashboard = ({ onLogout }) => {
     }
 
     setIsLoading(false);
+  };
+
+  const generateTimeGrid = () => {
+    if (!restaurantInfo || !bookings.length) return null;
+
+    // Get opening hours for the selected date
+    const dayOfWeek = new Date(date).getDay();
+    const daySettings = restaurantInfo.openingHours.find(h => h.day === dayOfWeek);
+
+    if (!daySettings || daySettings.isClosed) return <p>Restaurant is closed on this day.</p>;
+
+    // Parse opening and closing times
+    const openHour = parseInt(daySettings.open.split(':')[0]);
+    const openMinute = parseInt(daySettings.open.split(':')[1]);
+    const closeHour = parseInt(daySettings.close.split(':')[0]);
+    const closeMinute = parseInt(daySettings.close.split(':')[1]);
+
+    // Generate time slots (30-minute intervals)
+    const timeSlots = [];
+    let currentTime = new Date(date);
+    currentTime.setHours(openHour, openMinute, 0, 0);
+
+    const endTime = new Date(date);
+    endTime.setHours(closeHour, closeMinute, 0, 0);
+
+    // Handle case where closing is after midnight
+    if (endTime < currentTime) {
+      endTime.setDate(endTime.getDate() + 1);
+    }
+
+    while (currentTime < endTime) {
+      timeSlots.push(new Date(currentTime));
+      currentTime.setMinutes(currentTime.getMinutes() + 30);
+    }
+
+    // Map bookings to time slots
+    return (
+      <div className="bg-white shadow-lg rounded-lg overflow-auto mt-4 p-4">
+        <h3 className="text-lg font-semibold mb-4">Schedule Overview</h3>
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-1 gap-2">
+            {timeSlots.map((slot, idx) => {
+              const timeStr = slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const bookingsAtTime = bookings.filter(booking => {
+                const startTime = new Date(booking.timeSlot.start);
+                const endTime = new Date(booking.timeSlot.end);
+                return startTime <= slot && endTime > slot;
+              });
+
+              return (
+                <div key={idx} className="flex border-b pb-2">
+                  <div className="w-20 font-medium text-gray-700">{timeStr}</div>
+                  <div className="flex-1 flex flex-wrap gap-2">
+                    {bookingsAtTime.length > 0 ? (
+                      bookingsAtTime.map(booking => (
+                        <div
+                          key={booking._id}
+                          className={`px-3 py-1 rounded-full text-sm ${getStatusBadgeStyle(booking.status)}`}
+                        >
+                          {booking.customer.name} ({booking.partySize}) - Tables: {booking.tables.map(t => t.tableNumber).join(', ')}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-400 italic">Available</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const updateBookingStatus = async (id, newStatus) => {
@@ -296,6 +374,7 @@ const AdminDashboard = ({ onLogout }) => {
                     <Download size={16} className="mr-1" />
                     Export CSV
                   </button>
+                  {generateTimeGrid()}
                 </div>
 
                 <div className="relative w-full md:w-64">

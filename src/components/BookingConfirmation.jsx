@@ -28,6 +28,25 @@ const BookingConfirmation = ({ booking, onBack }) => {
     );
   }
 
+  const getStatusDisplay = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return { text: 'Confirmed', className: 'text-green-600' };
+      case 'pending':
+        return { text: 'Pending Confirmation', className: 'text-yellow-600' };
+      case 'seated':
+        return { text: 'Seated', className: 'text-blue-600' };
+      case 'completed':
+        return { text: 'Completed', className: 'text-purple-600' };
+      case 'cancelled':
+        return { text: 'Cancelled', className: 'text-red-600' };
+      case 'no-show':
+        return { text: 'No Show', className: 'text-gray-600' };
+      default:
+        return { text: 'Unknown Status', className: 'text-gray-600' };
+    }
+  };
+
   // Get booking reference (last 6 characters of ID)
   const bookingReference = booking.id?.slice(-6).toUpperCase() || booking._id?.slice(-6).toUpperCase() || 'N/A';
 
@@ -81,12 +100,19 @@ END:VCALENDAR`;
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg">
-      <div className="text-center text-green-600 mb-6">
-        <div className="bg-green-100 w-20 h-20 mx-auto rounded-full flex items-center justify-center">
-          <Check size={40} />
-        </div>
-        <h3 className="text-2xl font-bold mt-4">Reservation Confirmed!</h3>
-      </div>
+      <div className="text-center">
+  <div className="bg-green-100 w-20 h-20 mx-auto rounded-full flex items-center justify-center">
+    <Check size={40} />
+  </div>
+  {booking.status === 'pending' ? (
+    <h3 className="text-2xl font-bold mt-4 text-yellow-600">Reservation Pending!</h3>
+  ) : (
+    <h3 className="text-2xl font-bold mt-4 text-green-600">Reservation Confirmed!</h3>
+  )}
+  <p className={`mt-2 ${getStatusDisplay(booking.status).className}`}>
+    Status: {getStatusDisplay(booking.status).text}
+  </p>
+</div>
 
       <p className="text-center mb-6">
         A confirmation email has been sent to <span className="font-semibold">{booking.customer.email}</span>

@@ -15,6 +15,34 @@ const App = () => {
   const [bookingLookupError, setBookingLookupError] = useState('');
   const [bookingData, setBookingData] = useState(null);
 
+  // Add this function definition
+  const lookupBooking = async (reference, email) => {
+    setIsLoading(true);
+    setBookingLookupError('');
+
+    if (!reference || !email) {
+      setBookingLookupError('Please provide both reference number and email');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.bookings.lookupBooking(reference, email);
+
+      if (response.success) {
+        setBookingData(response.booking);
+        setCurrentPage('booking-details');
+      } else {
+        setBookingLookupError(response.error || 'Booking not found');
+      }
+    } catch (error) {
+      console.error('Error looking up booking:', error);
+      setBookingLookupError('An error occurred while looking up your booking');
+    }
+
+    setIsLoading(false);
+  };
+
   // Check authentication and load restaurant info on mount
   useEffect(() => {
     const initialize = async () => {
@@ -70,16 +98,31 @@ const App = () => {
   }, []);
 
   // Login handler
-  const handleLogin = async (e) => {
+  const handleLogin = async (e, directLogin = false) => {
     if (e) e.preventDefault();
     setIsLoading(true);
 
-    // Get credentials from the form
-    // (This assumes you're passing email and password from the LoginPage component)
-    const credentials = {
-      email: e.target.elements.email.value || 'admin@restaurant.com',
-      password: e.target.elements.password.value || 'password123'
-    };
+    let credentials;
+
+    if (directLogin) {
+      // Use default credentials when called directly without a form
+      credentials = {
+        email: 'admin@leustache.com',
+        password: 'password'
+      };
+    } else if (e && e.target && e.target.elements) {
+      // Get credentials from the form if available
+      credentials = {
+        email: e.target.elements.email.value,
+        password: e.target.elements.password.value
+      };
+    } else {
+      // Fallback for any other scenarios
+      credentials = {
+        email: 'admin@leustache.com',
+        password: 'password'
+      };
+    }
 
     try {
       console.log('Logging in with:', credentials);
@@ -116,21 +159,27 @@ const App = () => {
   // Booking lookup handler
   const handleBookingLookup = async (e) => {
     e.preventDefault();
-    await lookupBooking(bookingReference, bookingEmail);
-  };
-
-  const lookupBooking = async (reference, email) => {
     setIsLoading(true);
     setBookingLookupError('');
 
-    if (!reference || !email) {
+    if (!bookingReference || !bookingEmail) {
       setBookingLookupError('Please provide both reference number and email');
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await apiService.bookings.lookupBooking(reference, email);
+      console.log('Looking up booking with:', {
+        reference: bookingReference,
+        email: bookingEmail
+      });
+
+      const response = await apiService.bookings.lookupBooking(
+        bookingReference,
+        bookingEmail
+      );
+
+      console.log('Lookup response:', response);
 
       if (response.success) {
         setBookingData(response.booking);
@@ -212,11 +261,11 @@ const App = () => {
             Find My Booking
           </button>
           <button
-            onClick={handleLogin}
-            className="px-3 py-1 bg-primary text-white rounded-md shadow-md hover:bg-primary-dark transition-colors"
-          >
-            Admin Access
-          </button>
+  onClick={() => navigateTo('login')}
+  className="px-3 py-1 bg-primary text-white rounded-md shadow-md hover:bg-primary-dark transition-colors"
+>
+  Admin Access
+</button>
         </div>
       )}
 
