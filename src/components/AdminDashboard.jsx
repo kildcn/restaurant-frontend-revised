@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, LogOut, User, Settings, List, Grid, Search } from 'lucide-react';
+import { Calendar, Clock, LogOut, User, Settings, List, Grid, Search, Mail, Download, FileText } from 'lucide-react';
 import FloorPlan from './FloorPlan';
+import RestaurantSettings from './RestaurantSettings';
+import apiService from '../services/api';
+import moment from 'moment';
 
 const AdminDashboard = ({ onLogout }) => {
   const [activeView, setActiveView] = useState('bookings');
@@ -9,88 +12,69 @@ const AdminDashboard = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [restaurantInfo, setRestaurantInfo] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalBookings, setTotalBookings] = useState(0);
 
   useEffect(() => {
     // Set default date to today
     const today = new Date();
     setDate(today.toISOString().split('T')[0]);
+
+    // Fetch restaurant info
+    const fetchRestaurantInfo = async () => {
+      const response = await apiService.restaurant.getSettings();
+      if (response.success) {
+        setRestaurantInfo(response.settings);
+      }
+    };
+
+    fetchRestaurantInfo();
   }, []);
 
   useEffect(() => {
     if (date) {
       fetchBookings();
     }
-  }, [date, statusFilter]);
+  }, [date, statusFilter, page]);
 
   const fetchBookings = async () => {
     setIsLoading(true);
-    // This would fetch from your API in a real implementation
-    // Simulating API call
-    setTimeout(() => {
-      // Mock bookings data
-      const mockBookings = [
-        {
-          id: '1',
-          customer: { name: 'Jean Dupont', email: 'jean@example.com', phone: '0123456789' },
-          date: date,
-          timeSlot: { start: `${date}T18:00:00`, end: `${date}T20:00:00` },
-          partySize: 2,
-          tables: [{ id: 'A1', tableNumber: 'A1' }],
-          status: 'confirmed',
-          specialRequests: 'Window seat if possible'
-        },
-        {
-          id: '2',
-          customer: { name: 'Marie Laurent', email: 'marie@example.com', phone: '0123456789' },
-          date: date,
-          timeSlot: { start: `${date}T19:30:00`, end: `${date}T21:30:00` },
-          partySize: 4,
-          tables: [{ id: 'A3', tableNumber: 'A3' }],
-          status: 'pending',
-          specialRequests: ''
-        },
-        {
-          id: '3',
-          customer: { name: 'Thomas Bernard', email: 'thomas@example.com', phone: '0123456789' },
-          date: date,
-          timeSlot: { start: `${date}T20:30:00`, end: `${date}T22:30:00` },
-          partySize: 6,
-          tables: [{ id: 'A6', tableNumber: 'A6' }, { id: 'A7', tableNumber: 'A7' }],
-          status: 'seated',
-          specialRequests: 'Birthday celebration'
-        },
-        {
-          id: '4',
-          customer: { name: 'Sophie Martin', email: 'sophie@example.com', phone: '0123456789' },
-          date: date,
-          timeSlot: { start: `${date}T18:30:00`, end: `${date}T20:30:00` },
-          partySize: 2,
-          tables: [{ id: 'B1', tableNumber: 'B1' }],
-          status: 'completed',
-          specialRequests: ''
-        },
-        {
-          id: '5',
-          customer: { name: 'Pierre Michel', email: 'pierre@example.com', phone: '0123456789' },
-          date: date,
-          timeSlot: { start: `${date}T21:00:00`, end: `${date}T23:00:00` },
-          partySize: 3,
-          tables: [{ id: 'A4', tableNumber: 'A4' }],
-          status: 'cancelled',
-          specialRequests: ''
-        }
-      ];
+    try {
+      const response = await apiService.bookings.getBookings(date, statusFilter !== 'all' ? statusFilter : '', page, 10);
 
-      setBookings(mockBookings);
-      setIsLoading(false);
-    }, 600);
+      if (response.success) {
+        setBookings(response.data);
+        setTotalPages(Math.ceil(response.count / 10));
+        setTotalBookings(response.count);
+      } else {
+        console.error('Error fetching bookings:', response.error);
+        setBookings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      setBookings([]);
+    }
+
+    setIsLoading(false);
   };
 
-  const updateBookingStatus = (id, newStatus) => {
-    // In a real app, this would make an API call
-    setBookings(bookings.map(booking =>
-      booking.id === id ? { ...booking, status: newStatus } : booking
-    ));
+  const updateBookingStatus = async (id, newStatus) => {
+    try {
+      const response = await apiService.bookings.updateBookingStatus(id, newStatus);
+
+      if (response.success) {
+        // Update local state
+        setBookings(bookings.map(booking =>
+          booking._id === id ? { ...booking, status: newStatus } : booking
+        ));
+      } else {
+        console.error('Error updating booking status:', response.error);
+      }
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+    }
   };
 
   const getStatusBadgeStyle = (status) => {
@@ -112,25 +96,17 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  // Filter bookings based on search term and status filter
+  // Filter bookings based on search term
   const filteredBookings = bookings.filter(booking => {
-    // Filter by status
-    if (statusFilter !== 'all' && booking.status !== statusFilter) {
-      return false;
-    }
+    if (!searchTerm) return true;
 
-    // Filter by search term
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        booking.customer.name.toLowerCase().includes(searchLower) ||
-        booking.customer.email.toLowerCase().includes(searchLower) ||
-        booking.customer.phone.includes(searchTerm) ||
-        booking.tables.some(t => t.tableNumber.toLowerCase().includes(searchLower))
-      );
-    }
-
-    return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      booking.customer.name.toLowerCase().includes(searchLower) ||
+      booking.customer.email.toLowerCase().includes(searchLower) ||
+      booking.customer.phone.includes(searchTerm) ||
+      (booking.tables && booking.tables.some(t => t.tableNumber?.toLowerCase().includes(searchLower)))
+    );
   });
 
   // Format time for display (18:00 -> 6:00 PM)
@@ -138,6 +114,40 @@ const AdminDashboard = ({ onLogout }) => {
     if (!isoTime) return '';
     const date = new Date(isoTime);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Export bookings to CSV
+  const exportBookings = () => {
+    // Header row
+    let csv = 'Date,Time,End Time,Customer Name,Email,Phone,Party Size,Tables,Status,Special Requests\n';
+
+    // Add rows
+    bookings.forEach(booking => {
+      const row = [
+        moment(booking.date).format('YYYY-MM-DD'),
+        formatTime(booking.timeSlot.start),
+        formatTime(booking.timeSlot.end),
+        `"${booking.customer.name}"`,
+        `"${booking.customer.email}"`,
+        `"${booking.customer.phone}"`,
+        booking.partySize,
+        booking.tables.map(t => t.tableNumber).join(' & '),
+        booking.status,
+        `"${booking.specialRequests || ''}"`
+      ];
+
+      csv += row.join(',') + '\n';
+    });
+
+    // Create and download the file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bookings-${date}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -185,6 +195,30 @@ const AdminDashboard = ({ onLogout }) => {
             <Settings className="mr-3" size={18} />
             <span>Settings</span>
           </button>
+
+          <button
+            onClick={() => setActiveView('emails')}
+            className={`flex items-center w-full mb-4 p-3 rounded-md transition-colors ${
+              activeView === 'emails'
+                ? 'bg-primary text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            <Mail className="mr-3" size={18} />
+            <span>Email Templates</span>
+          </button>
+
+          <button
+            onClick={() => setActiveView('reports')}
+            className={`flex items-center w-full mb-4 p-3 rounded-md transition-colors ${
+              activeView === 'reports'
+                ? 'bg-primary text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            <FileText className="mr-3" size={18} />
+            <span>Reports</span>
+          </button>
         </nav>
 
         <div className="p-4 mt-auto border-t border-gray-800">
@@ -206,7 +240,9 @@ const AdminDashboard = ({ onLogout }) => {
             <h2 className="text-2xl font-display font-semibold text-gray-800">
               {activeView === 'bookings' && 'Manage Bookings'}
               {activeView === 'floorplan' && 'Floor Plan'}
-              {activeView === 'settings' && 'Settings'}
+              {activeView === 'settings' && 'Restaurant Settings'}
+              {activeView === 'emails' && 'Email Templates'}
+              {activeView === 'reports' && 'Reports & Analytics'}
             </h2>
 
             <div className="flex items-center">
@@ -233,7 +269,7 @@ const AdminDashboard = ({ onLogout }) => {
             <div>
               {/* Filters and Search */}
               <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
@@ -249,8 +285,17 @@ const AdminDashboard = ({ onLogout }) => {
                   </select>
 
                   <div className="text-sm font-medium">
-                    {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
+                    {searchTerm ? filteredBookings.length : totalBookings} booking{(searchTerm ? filteredBookings.length : totalBookings) !== 1 ? 's' : ''}
                   </div>
+
+                  <button
+                    onClick={exportBookings}
+                    className="flex items-center px-3 py-2 text-sm bg-primary text-white rounded hover:bg-primary-dark transition-colors"
+                    disabled={bookings.length === 0}
+                  >
+                    <Download size={16} className="mr-1" />
+                    Export CSV
+                  </button>
                 </div>
 
                 <div className="relative w-full md:w-64">
@@ -295,7 +340,7 @@ const AdminDashboard = ({ onLogout }) => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredBookings.map((booking) => (
-                        <tr key={booking.id} className="hover:bg-gray-50">
+                        <tr key={booking._id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-medium text-gray-900">{booking.customer.name}</div>
                             <div className="text-sm text-gray-500">{booking.customer.email}</div>
@@ -327,7 +372,7 @@ const AdminDashboard = ({ onLogout }) => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <select
                               value={booking.status}
-                              onChange={(e) => updateBookingStatus(booking.id, e.target.value)}
+                              onChange={(e) => updateBookingStatus(booking._id, e.target.value)}
                               className="p-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                             >
                               <option value="pending">Pending</option>
@@ -342,6 +387,31 @@ const AdminDashboard = ({ onLogout }) => {
                       ))}
                     </tbody>
                   </table>
+
+                  {/* Pagination */}
+                  {!searchTerm && totalPages > 1 && (
+                    <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                      <div className="text-sm text-gray-500">
+                        Showing page {page} of {totalPages}
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setPage(Math.max(1, page - 1))}
+                          disabled={page === 1}
+                          className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() => setPage(Math.min(totalPages, page + 1))}
+                          disabled={page === totalPages}
+                          className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12 bg-white shadow-lg rounded-lg">
@@ -364,50 +434,96 @@ const AdminDashboard = ({ onLogout }) => {
           )}
 
           {activeView === 'settings' && (
+            <RestaurantSettings />
+          )}
+
+          {activeView === 'emails' && (
             <div className="bg-white shadow-lg rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-4">Restaurant Settings</h3>
-              <p className="text-gray-500">Settings functionality would be implemented here.</p>
+              <h3 className="text-xl font-semibold mb-4">Email Templates</h3>
+              <p className="text-gray-500 mb-6">
+                Customize the email templates sent to customers. This functionality will be implemented soon.
+              </p>
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium mb-2">Booking Confirmation Email</h4>
+                <p className="text-sm text-gray-600">Sent immediately after a booking is made.</p>
+                <button className="mt-2 px-3 py-1 text-sm bg-primary text-white rounded">Edit Template</button>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium mb-2">Booking Reminder Email</h4>
+                <p className="text-sm text-gray-600">Sent 24 hours before the reservation.</p>
+                <button className="mt-2 px-3 py-1 text-sm bg-primary text-white rounded">Edit Template</button>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium mb-2">Post-Dining Feedback Email</h4>
+                <p className="text-sm text-gray-600">Sent after the guest's visit to collect feedback.</p>
+                <button className="mt-2 px-3 py-1 text-sm bg-primary text-white rounded">Edit Template</button>
+              </div>
+            </div>
+          )}
+
+          {activeView === 'reports' && (
+            <div className="bg-white shadow-lg rounded-lg p-6">
+              <h3 className="text-xl font-semibold mb-4">Reports & Analytics</h3>
+              <p className="text-gray-500 mb-6">
+                View booking statistics and analytics. This functionality will be implemented soon.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Opening Hours</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Wednesday:</span>
-                      <span>6:00 PM - 11:45 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Thursday:</span>
-                      <span>6:00 PM - 11:45 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Friday:</span>
-                      <span>6:00 PM - 11:45 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Saturday:</span>
-                      <span>6:00 PM - 11:45 PM</span>
-                    </div>
-                  </div>
+                  <h4 className="font-medium mb-2">Today's Summary</h4>
+                  <div className="text-2xl font-bold">{bookings.filter(b => b.status !== 'cancelled' && b.status !== 'no-show').length}</div>
+                  <p className="text-sm text-gray-600">Active bookings</p>
                 </div>
 
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Booking Rules</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Time slot duration:</span>
-                      <span>2 hours</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Max party size:</span>
-                      <span>6 guests</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Advance booking:</span>
-                      <span>30 days</span>
-                    </div>
+                  <h4 className="font-medium mb-2">This Week</h4>
+                  <div className="text-2xl font-bold">--</div>
+                  <p className="text-sm text-gray-600">Total bookings</p>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">This Month</h4>
+                  <div className="text-2xl font-bold">--</div>
+                  <p className="text-sm text-gray-600">Total bookings</p>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium mb-3">Generate Report</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">From Date</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">To Date</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Report Type</label>
+                    <select className="w-full p-2 border border-gray-300 rounded">
+                      <option>Bookings Summary</option>
+                      <option>Customer Statistics</option>
+                      <option>Table Utilization</option>
+                    </select>
                   </div>
                 </div>
+
+                <button className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors flex items-center">
+                  <Download size={16} className="mr-2" />
+                  Generate Report
+                </button>
               </div>
             </div>
           )}

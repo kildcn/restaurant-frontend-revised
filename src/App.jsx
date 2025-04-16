@@ -1,42 +1,105 @@
 import React, { useState, useEffect } from 'react';
 import Homepage from './components/Homepage';
 import AdminDashboard from './components/AdminDashboard';
+import BookingConfirmation from './components/BookingConfirmation';
+import apiService from './services/api';
+import { Calendar } from 'lucide-react';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [restaurantInfo, setRestaurantInfo] = useState(null);
+  const [bookingReference, setBookingReference] = useState('');
+  const [bookingEmail, setBookingEmail] = useState('');
+  const [bookingLookupError, setBookingLookupError] = useState('');
+  const [bookingData, setBookingData] = useState(null);
 
-  // Add a simple way to determine if we should show admin directly
+  // Check authentication and load restaurant info on mount
   useEffect(() => {
-    // Check URL parameters for admin access
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('admin')) {
-      setCurrentPage('admin');
-      setIsAuthenticated(true);
-    } else {
-      // Original authentication check
-      const token = localStorage.getItem('authToken');
-      if (token) {
+    const initialize = async () => {
+      setIsLoading(true);
+
+      // Check URL parameters for admin access or booking reference
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('admin')) {
+        setCurrentPage('admin');
         setIsAuthenticated(true);
-        if (window.location.pathname.includes('admin')) {
-          setCurrentPage('admin');
+      } else if (urlParams.has('ref') && urlParams.has('email')) {
+        // Handle booking lookup from URL
+        const ref = urlParams.get('ref');
+        const email = urlParams.get('email');
+        await lookupBooking(ref, email);
+      } else {
+        // Original authentication check
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          try {
+            // Validate token
+            const response = await apiService.auth.getProfile();
+            if (response.success) {
+              setIsAuthenticated(true);
+              if (window.location.pathname.includes('admin')) {
+                setCurrentPage('admin');
+              }
+            } else {
+              // Token invalid
+              localStorage.removeItem('authToken');
+            }
+          } catch (error) {
+            console.error('Auth check error:', error);
+            localStorage.removeItem('authToken');
+          }
         }
       }
-    }
+
+      // Fetch restaurant info
+      try {
+        const response = await apiService.restaurant.getSettings();
+        if (response.success) {
+          setRestaurantInfo(response.settings);
+        }
+      } catch (error) {
+        console.error('Error fetching restaurant info:', error);
+      }
+
+      setIsLoading(false);
+    };
+
+    initialize();
   }, []);
 
-  // Simple login handler for demo
-  const handleLogin = (e) => {
+  // Login handler
+  const handleLogin = async (e) => {
     if (e) e.preventDefault();
-    // In a real app, this would make an API call
-    localStorage.setItem('authToken', 'demo-token');
-    setIsAuthenticated(true);
-    setCurrentPage('admin');
+
+    setIsLoading(true);
+
+    // Demo credentials
+    const credentials = {
+      email: 'admin@leustache.com',
+      password: 'password'
+    };
+
+    try {
+      const response = await apiService.auth.login(credentials);
+
+      if (response.success) {
+        setIsAuthenticated(true);
+        setCurrentPage('admin');
+      } else {
+        console.error('Login failed:', response.error);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+
+    setIsLoading(false);
   };
 
   // Logout handler
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
+    apiService.auth.logout();
     setIsAuthenticated(false);
     setCurrentPage('home');
   };
@@ -44,6 +107,39 @@ const App = () => {
   // Navigation handlers
   const navigateTo = (page) => {
     setCurrentPage(page);
+  };
+
+  // Booking lookup handler
+  const handleBookingLookup = async (e) => {
+    e.preventDefault();
+    await lookupBooking(bookingReference, bookingEmail);
+  };
+
+  const lookupBooking = async (reference, email) => {
+    setIsLoading(true);
+    setBookingLookupError('');
+
+    if (!reference || !email) {
+      setBookingLookupError('Please provide both reference number and email');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.bookings.lookupBooking(reference, email);
+
+      if (response.success) {
+        setBookingData(response.booking);
+        setCurrentPage('booking-details');
+      } else {
+        setBookingLookupError(response.error || 'Booking not found');
+      }
+    } catch (error) {
+      console.error('Error looking up booking:', error);
+      setBookingLookupError('An error occurred while looking up your booking');
+    }
+
+    setIsLoading(false);
   };
 
   // Render the appropriate page
@@ -59,16 +155,58 @@ const App = () => {
         return isAuthenticated ?
           <AdminDashboard onLogout={handleLogout} /> :
           <LoginPage onLogin={handleLogin} />;
+      case 'booking-details':
+        return bookingData ?
+          <BookingConfirmation
+            booking={bookingData}
+            onBack={() => navigateTo('home')}
+          /> :
+          <BookingLookupPage
+            onLookup={handleBookingLookup}
+            reference={bookingReference}
+            setReference={setBookingReference}
+            email={bookingEmail}
+            setEmail={setBookingEmail}
+            error={bookingLookupError}
+          />;
+      case 'booking-lookup':
+        return (
+          <BookingLookupPage
+            onLookup={handleBookingLookup}
+            reference={bookingReference}
+            setReference={setBookingReference}
+            email={bookingEmail}
+            setEmail={setBookingEmail}
+            error={bookingLookupError}
+          />
+        );
       default:
         return <Homepage onBookingClick={() => {}} onLogin={() => navigateTo('login')} />;
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="app">
-      {/* Add a simple admin access button for testing */}
+    <div className="app min-h-screen bg-gray-50">
+      {/* Navigation overlay for quick actions */}
       {currentPage === 'home' && (
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed top-4 right-4 z-50 flex space-x-2">
+          <button
+            onClick={() => navigateTo('booking-lookup')}
+            className="px-3 py-1 bg-white text-primary border border-primary rounded-md shadow-md hover:bg-primary-light hover:bg-opacity-10 transition-colors"
+          >
+            Find My Booking
+          </button>
           <button
             onClick={handleLogin}
             className="px-3 py-1 bg-primary text-white rounded-md shadow-md hover:bg-primary-dark transition-colors"
@@ -77,6 +215,7 @@ const App = () => {
           </button>
         </div>
       )}
+
       {renderPage()}
     </div>
   );
@@ -141,6 +280,70 @@ const LoginPage = ({ onLogin }) => {
               Email: admin@leustache.com <br />
               Password: password
             </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Booking lookup page
+const BookingLookupPage = ({ onLookup, reference, setReference, email, setEmail, error }) => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <Calendar className="h-12 w-12 mx-auto text-primary" />
+          <h2 className="mt-2 text-3xl font-bold text-gray-900">Find Your Booking</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Enter your booking reference and email address to view your reservation
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-100 text-red-800 p-3 rounded">
+            {error}
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={onLookup}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="reference" className="sr-only">Booking Reference</label>
+              <input
+                id="reference"
+                name="reference"
+                type="text"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="Booking Reference"
+                value={reference}
+                onChange={(e) => setReference(e.target.value.toUpperCase())}
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="sr-only">Email address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Find Reservation
+            </button>
           </div>
         </form>
       </div>

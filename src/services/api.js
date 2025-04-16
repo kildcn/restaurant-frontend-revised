@@ -1,8 +1,8 @@
-// src/services/api.js
+// src/services/api.js - Enhanced with comprehensive booking functionality
 import axios from 'axios';
 
 // Default API configuration
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -23,6 +23,14 @@ apiClient.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+
+// Error handling helper
+const getErrorMessage = (error) => {
+  if (error.response && error.response.data) {
+    return error.response.data.message || error.response.data.error || 'An error occurred';
+  }
+  return error.message || 'An error occurred';
+};
 
 // API Service object
 const apiService = {
@@ -101,6 +109,16 @@ const apiService = {
       }
     },
 
+    // Public lookup for customers (no auth required)
+    lookupBooking: async (reference, email) => {
+      try {
+        const response = await apiClient.post('/bookings/lookup', { reference, email });
+        return { success: true, booking: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
     updateBookingStatus: async (id, status) => {
       try {
         const response = await apiClient.put(`/bookings/${id}/status`, { status });
@@ -149,10 +167,28 @@ const apiService = {
       }
     },
 
+    createTable: async (tableData) => {
+      try {
+        const response = await apiClient.post('/tables', tableData);
+        return { success: true, table: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
     updateTable: async (id, tableData) => {
       try {
         const response = await apiClient.put(`/tables/${id}`, tableData);
         return { success: true, table: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    deleteTable: async (id) => {
+      try {
+        const response = await apiClient.delete(`/tables/${id}`);
+        return { success: true };
       } catch (error) {
         return { success: false, error: getErrorMessage(error) };
       }
@@ -197,16 +233,90 @@ const apiService = {
       } catch (error) {
         return { success: false, error: getErrorMessage(error) };
       }
+    },
+
+    addClosedDate: async (date, reason) => {
+      try {
+        const response = await apiClient.post('/restaurant/closed-dates', {
+          date,
+          reason
+        });
+        return { success: true, closedDates: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    addSpecialEvent: async (eventData) => {
+      try {
+        const response = await apiClient.post('/restaurant/special-events', eventData);
+        return { success: true, specialEvents: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    }
+  },
+
+  // User management for admin
+  users: {
+    getUsers: async (search = '', role = '', page = 1, limit = 10) => {
+      try {
+        let query = `?page=${page}&limit=${limit}`;
+        if (search) query += `&search=${search}`;
+        if (role) query += `&role=${role}`;
+
+        const response = await apiClient.get(`/users${query}`);
+        return { success: true, ...response.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    getUser: async (id) => {
+      try {
+        const response = await apiClient.get(`/users/${id}`);
+        return { success: true, user: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    createUser: async (userData) => {
+      try {
+        const response = await apiClient.post('/users', userData);
+        return { success: true, user: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    updateUser: async (id, userData) => {
+      try {
+        const response = await apiClient.put(`/users/${id}`, userData);
+        return { success: true, user: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    deleteUser: async (id) => {
+      try {
+        await apiClient.delete(`/users/${id}`);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    },
+
+    getUserBookings: async (id) => {
+      try {
+        const response = await apiClient.get(`/users/${id}/bookings`);
+        return { success: true, bookings: response.data.data };
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
     }
   }
-};
-
-// Helper function to extract error message
-const getErrorMessage = (error) => {
-  if (error.response && error.response.data) {
-    return error.response.data.message || error.response.data.error || 'An error occurred';
-  }
-  return error.message || 'An error occurred';
 };
 
 export default apiService;
