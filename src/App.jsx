@@ -72,16 +72,17 @@ const App = () => {
   // Login handler
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
-
     setIsLoading(true);
 
-    // Demo credentials
+    // Get credentials from the form
+    // (This assumes you're passing email and password from the LoginPage component)
     const credentials = {
-      email: 'admin@leustache.com',
-      password: 'password'
+      email: e.target.elements.email.value || 'admin@restaurant.com',
+      password: e.target.elements.password.value || 'password123'
     };
 
     try {
+      console.log('Logging in with:', credentials);
       const response = await apiService.auth.login(credentials);
 
       if (response.success) {
@@ -89,9 +90,12 @@ const App = () => {
         setCurrentPage('admin');
       } else {
         console.error('Login failed:', response.error);
+        // You should show this error to the user
+        alert('Login failed: ' + response.error);
       }
     } catch (error) {
       console.error('Login error:', error);
+      alert('An unexpected error occurred during login');
     }
 
     setIsLoading(false);

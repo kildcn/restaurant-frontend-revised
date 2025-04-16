@@ -99,8 +99,11 @@ const BookingForm = () => {
         return;
       }
 
+      // Use the opening time as the default time for availability check
+      const defaultTime = daySettings.open; // This will be something like "18:00"
+
       // Check time slot availability from API
-      const response = await apiService.bookings.checkAvailability(date, null, guests);
+      const response = await apiService.bookings.checkAvailability(date, defaultTime, guests);
 
       if (response.success && response.data.available) {
         // Generate time slots

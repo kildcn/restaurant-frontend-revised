@@ -38,13 +38,28 @@ const apiService = {
   auth: {
     login: async (credentials) => {
       try {
+        console.log('Attempting login with:', credentials);
+
         const response = await apiClient.post('/auth/login', credentials);
-        const { token, user } = response.data;
-        // Store token
-        localStorage.setItem('authToken', token);
-        return { success: true, user };
+        console.log('Login response:', response.data);
+
+        if (response.data && response.data.success && response.data.token) {
+          // Store token
+          localStorage.setItem('authToken', response.data.token);
+          return { success: true, user: response.data.user };
+        } else {
+          console.error('Invalid response format:', response.data);
+          return {
+            success: false,
+            error: 'Login failed: Invalid server response'
+          };
+        }
       } catch (error) {
-        return { success: false, error: getErrorMessage(error) };
+        console.error('Login error:', error.response?.data || error.message);
+        return {
+          success: false,
+          error: getErrorMessage(error)
+        };
       }
     },
 
@@ -67,13 +82,20 @@ const apiService = {
   bookings: {
     checkAvailability: async (date, time, partySize) => {
       try {
+        // Ensure we always send a time parameter
+        const requestTime = time || "18:00"; // Default to 6:00 PM if no time provided
+
+        console.log('Checking availability with params:', { date, time: requestTime, partySize });
+
         const response = await apiClient.post('/bookings/check-availability', {
           date,
-          time,
+          time: requestTime,
           partySize
         });
+
         return { success: true, data: response.data };
       } catch (error) {
+        console.error('Error checking availability:', error.response?.data || error.message);
         return { success: false, error: getErrorMessage(error) };
       }
     },
