@@ -29,8 +29,18 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
       console.log("Tables response:", response);
 
       if (response.success) {
+        // Fix: Access the correct property - tables could be in data or tables property
+        const tablesData = response.data || response.tables || [];
+
+        // Debug logging
+        console.log("Tables data extracted:", tablesData);
+
+        if (tablesData.length === 0) {
+          console.warn("API returned empty tables array");
+        }
+
         // Create a mock floor plan with positions for each table
-        const tablesWithPositions = assignTablePositions(response.data);
+        const tablesWithPositions = assignTablePositions(tablesData);
         console.log("Tables with positions:", tablesWithPositions);
         setFloorPlanData(tablesWithPositions);
       } else {
@@ -54,40 +64,112 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
     // Sort tables to ensure consistent layout
     const sortedTables = [...tables].sort((a, b) => {
-      const aNum = parseInt(a.tableNumber.replace(/\D/g, ''));
-      const bNum = parseInt(b.tableNumber.replace(/\D/g, ''));
+      // Handle case when tableNumber might not be a string with letters
+      const aNum = a.tableNumber ? parseInt(a.tableNumber.replace(/\D/g, '')) : 0;
+      const bNum = b.tableNumber ? parseInt(b.tableNumber.replace(/\D/g, '')) : 0;
       return aNum - bNum;
     });
 
     const indoorTables = sortedTables.filter(t => t.section === 'indoor');
     const outdoorTables = sortedTables.filter(t => t.section === 'outdoor');
+    const barTables = sortedTables.filter(t => t.section === 'bar');
+    const privateTables = sortedTables.filter(t => t.section === 'private');
+    const windowTables = sortedTables.filter(t => t.section === 'window');
+    const otherTables = sortedTables.filter(t =>
+      t.section !== 'indoor' &&
+      t.section !== 'outdoor' &&
+      t.section !== 'bar' &&
+      t.section !== 'private' &&
+      t.section !== 'window'
+    );
+
+    console.log("Sorted tables by section:", {
+      indoor: indoorTables.length,
+      outdoor: outdoorTables.length,
+      bar: barTables.length,
+      private: privateTables.length,
+      window: windowTables.length,
+      other: otherTables.length
+    });
 
     // Calculate positions for indoor tables in a grid layout
     const positionedIndoor = indoorTables.map((table, index) => {
-      // Create a grid layout with 5 columns
-      const row = Math.floor(index / 5);
-      const col = index % 5;
+      // Create a grid layout with 4 columns
+      const row = Math.floor(index / 4);
+      const col = index % 4;
       return {
         ...table,
-        x: 100 + (col * 80),  // x position based on column
-        y: 100 + (row * 80),  // y position based on row
+        x: 100 + (col * 100),  // x position based on column (more spacing)
+        y: 100 + (row * 100),  // y position based on row (more spacing)
+        width: 70,
+        height: 70
+      };
+    });
+
+    // Position window tables at the top
+    const positionedWindow = windowTables.map((table, index) => {
+      return {
+        ...table,
+        x: 100 + (index * 100),  // Position horizontally
+        y: 30,                   // At the top
         width: 60,
         height: 60
       };
     });
 
-    // Calculate positions for outdoor tables in a row
+    // Position bar tables on the right side
+    const positionedBar = barTables.map((table, index) => {
+      return {
+        ...table,
+        x: 580,                  // Fixed x position on right
+        y: 100 + (index * 80),   // Stacked vertically
+        width: 50,
+        height: 50
+      };
+    });
+
+    // Position private tables at the bottom right
+    const positionedPrivate = privateTables.map((table, index) => {
+      return {
+        ...table,
+        x: 480 - (index * 100),  // Position horizontally from right
+        y: 400,                  // Fixed y at bottom
+        width: 90,
+        height: 70
+      };
+    });
+
+    // Calculate positions for outdoor tables in a row at the bottom
     const positionedOutdoor = outdoorTables.map((table, index) => {
       return {
         ...table,
-        x: 100 + (index * 80),  // Position horizontally
-        y: 400,                 // All outdoor tables at the bottom
+        x: 100 + (index * 100),  // Position horizontally with more spacing
+        y: 300,                  // All outdoor tables at the bottom
+        width: 70,
+        height: 70
+      };
+    });
+
+    // Position any other tables
+    const positionedOther = otherTables.map((table, index) => {
+      return {
+        ...table,
+        x: 400 + (index * 80),
+        y: 200,
         width: 60,
         height: 60
       };
     });
 
-    return [...positionedIndoor, ...positionedOutdoor];
+    // Combine all positioned tables
+    return [
+      ...positionedWindow,
+      ...positionedIndoor,
+      ...positionedBar,
+      ...positionedOutdoor,
+      ...positionedPrivate,
+      ...positionedOther
+    ];
   };
 
   const handleTableClick = (table) => {
@@ -229,15 +311,20 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
               </div>
             )}
 
-            {/* Indoor section label */}
+            {/* Section labels */}
             <div className="absolute top-2 left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
               Indoor Area ({floorPlanData.filter(t => t.section === 'indoor').length} tables)
             </div>
 
-            {/* Outdoor section label */}
-            <div className="absolute top-[380px] left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
+            <div className="absolute top-[280px] left-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
               Outdoor Area ({floorPlanData.filter(t => t.section === 'outdoor').length} tables)
             </div>
+
+            {floorPlanData.filter(t => t.section === 'bar').length > 0 && (
+              <div className="absolute top-2 right-2 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
+                Bar Area ({floorPlanData.filter(t => t.section === 'bar').length} tables)
+              </div>
+            )}
 
             {/* Tables */}
             {floorPlanData.map(table => {
@@ -310,6 +397,16 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                 );
               });
             })}
+
+            {/* Add debug button to reload floor plan */}
+            <div className="absolute bottom-2 right-2">
+              <button
+                onClick={fetchFloorPlanData}
+                className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200"
+              >
+                Reload Tables
+              </button>
+            </div>
           </div>
 
           {/* Details Panel */}

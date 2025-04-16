@@ -206,8 +206,25 @@ const apiService = {
     getTables: async () => {
       try {
         const response = await apiClient.get('/tables');
-        return { success: true, tables: response.data.data };
+
+        // Debug the response structure
+        console.log('Raw tables API response:', response.data);
+
+        // API returns data in response.data.data
+        if (response.data && response.data.success && response.data.data) {
+          return {
+            success: true,
+            data: response.data.data
+          };
+        } else {
+          // Fallback structure
+          return {
+            success: true,
+            data: response.data || []
+          };
+        }
       } catch (error) {
+        console.error('Error fetching tables:', error);
         return { success: false, error: getErrorMessage(error) };
       }
     },
