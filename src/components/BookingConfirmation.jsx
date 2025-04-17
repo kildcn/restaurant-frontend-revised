@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Check, Calendar, Clock, User, Mail, Phone, ChevronLeft, Download, AlertCircle } from 'lucide-react';
+import { Check, Calendar, Clock, User, Mail, Phone, ChevronLeft, Download, AlertCircle, Share2 } from 'lucide-react';
 import moment from 'moment';
 
 const BookingConfirmation = ({ booking, onBack }) => {
   const [copied, setCopied] = useState(false);
+  const [showShareOptions, setShowShareOptions] = useState(false);
 
   if (!booking) {
     return (
@@ -98,21 +99,48 @@ END:VCALENDAR`;
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleShare = () => {
+    setShowShareOptions(!showShareOptions);
+  };
+
+  const shareUrl = `${window.location.origin}?ref=${bookingReference}&email=${encodeURIComponent(booking.customer.email)}`;
+
+  const shareViaPlatform = (platform) => {
+    let shareUrl;
+
+    switch (platform) {
+      case 'email':
+        shareUrl = `mailto:?subject=My Restaurant Reservation at L'Eustache&body=Here is my reservation information:%0D%0A%0D%0AReference: ${bookingReference}%0D%0ADate: ${formattedDate}%0D%0ATime: ${startTime}%0D%0A%0D%0AView details: ${window.location.href}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=My reservation at L'Eustache:%0AReference: ${bookingReference}%0ADate: ${formattedDate}%0ATime: ${startTime}%0A%0AView details: ${window.location.href}`;
+        break;
+      case 'sms':
+        shareUrl = `sms:?body=My reservation at L'Eustache: Reference ${bookingReference}, Date ${formattedDate}, Time ${startTime}`;
+        break;
+      default:
+        return;
+    }
+
+    window.open(shareUrl, '_blank');
+    setShowShareOptions(false);
+  };
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg">
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <div className="text-center">
-  <div className="bg-green-100 w-20 h-20 mx-auto rounded-full flex items-center justify-center">
-    <Check size={40} />
-  </div>
-  {booking.status === 'pending' ? (
-    <h3 className="text-2xl font-bold mt-4 text-yellow-600">Reservation Pending!</h3>
-  ) : (
-    <h3 className="text-2xl font-bold mt-4 text-green-600">Reservation Confirmed!</h3>
-  )}
-  <p className={`mt-2 ${getStatusDisplay(booking.status).className}`}>
-    Status: {getStatusDisplay(booking.status).text}
-  </p>
-</div>
+        <div className="bg-green-100 w-20 h-20 mx-auto rounded-full flex items-center justify-center">
+          <Check size={40} className="text-green-600" />
+        </div>
+        {booking.status === 'pending' ? (
+          <h3 className="text-2xl font-bold mt-4 text-yellow-600">Reservation Pending!</h3>
+        ) : (
+          <h3 className="text-2xl font-bold mt-4 text-green-600">Reservation Confirmed!</h3>
+        )}
+        <p className={`mt-2 ${getStatusDisplay(booking.status).className}`}>
+          Status: {getStatusDisplay(booking.status).text}
+        </p>
+      </div>
 
       <p className="text-center mb-6">
         A confirmation email has been sent to <span className="font-semibold">{booking.customer.email}</span>
@@ -123,7 +151,7 @@ END:VCALENDAR`;
           <span className="font-semibold">Booking Reference:</span>
           <button
             onClick={copyReferenceToClipboard}
-            className="text-primary hover:text-primary-dark flex items-center text-sm"
+            className="text-primary hover:text-primary-dark flex items-center text-sm bg-white px-2 py-1 rounded-md transition-colors"
           >
             {bookingReference}
             <span className="ml-2 text-xs">
@@ -174,6 +202,19 @@ END:VCALENDAR`;
             <div>{booking.customer.email}</div>
           </div>
 
+          {booking.tables && booking.tables.length > 0 && (
+            <div className="border-t pt-4 mt-4">
+              <div className="font-medium mb-1">Table Assignment:</div>
+              <div className="flex flex-wrap gap-2">
+                {booking.tables.map(table => (
+                  <span key={table._id} className="px-3 py-1 bg-gray-100 rounded-full text-sm">
+                    Table {table.tableNumber}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {booking.specialRequests && (
             <div className="border-t pt-4 mt-4">
               <div className="font-medium mb-1">Special Requests:</div>
@@ -189,7 +230,7 @@ END:VCALENDAR`;
           className="flex items-center justify-center px-4 py-2 border border-primary text-primary rounded hover:bg-primary-light hover:bg-opacity-10 transition-colors"
         >
           <ChevronLeft size={16} className="mr-2" />
-          Back to Booking
+          Back to Home
         </button>
 
         <button
@@ -199,6 +240,39 @@ END:VCALENDAR`;
           <Calendar size={16} className="mr-2" />
           Add to Calendar
         </button>
+
+        <div className="relative">
+          <button
+            onClick={handleShare}
+            className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
+          >
+            <Share2 size={16} className="mr-2" />
+            Share
+          </button>
+
+          {showShareOptions && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border">
+              <button
+                onClick={() => shareViaPlatform('email')}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              >
+                Share via Email
+              </button>
+              <button
+                onClick={() => shareViaPlatform('whatsapp')}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              >
+                Share via WhatsApp
+              </button>
+              <button
+                onClick={() => shareViaPlatform('sms')}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              >
+                Share via SMS
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 text-center text-sm text-gray-600">

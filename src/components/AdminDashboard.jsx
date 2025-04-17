@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, LogOut, User, Settings, List, Grid, Search, Mail, Download, FileText } from 'lucide-react';
+import { Clock, User, LogOut, Settings, List, Grid, Search, Mail, Download, FileText, Calendar, Filter, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock as ClockIcon, Users as UsersIcon } from 'lucide-react';
 import FloorPlan from './FloorPlan';
 import RestaurantSettings from './RestaurantSettings';
 import apiService from '../services/api';
@@ -16,6 +16,15 @@ const AdminDashboard = ({ onLogout }) => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [timeViewMode, setTimeViewMode] = useState('grid'); // 'grid' or 'list'
+  const [statisticsData, setStatisticsData] = useState({
+    total: 0,
+    seated: 0,
+    confirmed: 0,
+    pending: 0,
+    cancelled: 0,
+    noShow: 0
+  });
 
   useEffect(() => {
     // Set default date to today
@@ -42,7 +51,7 @@ const AdminDashboard = ({ onLogout }) => {
   const fetchBookings = async () => {
     setIsLoading(true);
     try {
-      const response = await apiService.bookings.getBookings(date, statusFilter !== 'all' ? statusFilter : '', page, 10);
+      const response = await apiService.bookings.getBookings(date, statusFilter !== 'all' ? statusFilter : '', page, 20);
 
       if (response.success) {
         // Sort bookings by start time
@@ -51,8 +60,11 @@ const AdminDashboard = ({ onLogout }) => {
         });
 
         setBookings(sortedBookings);
-        setTotalPages(Math.ceil(response.count / 10));
+        setTotalPages(Math.ceil(response.count / 20));
         setTotalBookings(response.count);
+
+        // Calculate statistics
+        calculateStatistics(response.data);
       } else {
         console.error('Error fetching bookings:', response.error);
         setBookings([]);
@@ -65,6 +77,27 @@ const AdminDashboard = ({ onLogout }) => {
     setIsLoading(false);
   };
 
+  const calculateStatistics = (bookingsData) => {
+    const stats = {
+      total: bookingsData.length,
+      seated: 0,
+      confirmed: 0,
+      pending: 0,
+      cancelled: 0,
+      noShow: 0
+    };
+
+    bookingsData.forEach(booking => {
+      if (booking.status === 'seated') stats.seated++;
+      else if (booking.status === 'confirmed') stats.confirmed++;
+      else if (booking.status === 'pending') stats.pending++;
+      else if (booking.status === 'cancelled') stats.cancelled++;
+      else if (booking.status === 'no-show') stats.noShow++;
+    });
+
+    setStatisticsData(stats);
+  };
+
   const generateTimeGrid = () => {
     if (!restaurantInfo || !bookings.length) return null;
 
@@ -72,7 +105,7 @@ const AdminDashboard = ({ onLogout }) => {
     const dayOfWeek = new Date(date).getDay();
     const daySettings = restaurantInfo.openingHours.find(h => h.day === dayOfWeek);
 
-    if (!daySettings || daySettings.isClosed) return <p>Restaurant is closed on this day.</p>;
+    if (!daySettings || daySettings.isClosed) return <p className="text-center py-4">Restaurant is closed on this day.</p>;
 
     // Parse opening and closing times
     const openHour = parseInt(daySettings.open.split(':')[0]);
@@ -100,40 +133,187 @@ const AdminDashboard = ({ onLogout }) => {
 
     // Map bookings to time slots
     return (
-      <div className="bg-white shadow-lg rounded-lg overflow-auto mt-4 p-4">
-        <h3 className="text-lg font-semibold mb-4">Schedule Overview</h3>
-        <div className="overflow-x-auto">
-          <div className="grid grid-cols-1 gap-2">
-            {timeSlots.map((slot, idx) => {
-              const timeStr = slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              const bookingsAtTime = bookings.filter(booking => {
-                const startTime = new Date(booking.timeSlot.start);
-                const endTime = new Date(booking.timeSlot.end);
-                return startTime <= slot && endTime > slot;
-              });
-
-              return (
-                <div key={idx} className="flex border-b pb-2">
-                  <div className="w-20 font-medium text-gray-700">{timeStr}</div>
-                  <div className="flex-1 flex flex-wrap gap-2">
-                    {bookingsAtTime.length > 0 ? (
-                      bookingsAtTime.map(booking => (
-                        <div
-                          key={booking._id}
-                          className={`px-3 py-1 rounded-full text-sm ${getStatusBadgeStyle(booking.status)}`}
-                        >
-                          {booking.customer.name} ({booking.partySize}) - Tables: {booking.tables.map(t => t.tableNumber).join(', ')}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-sm text-gray-400 italic">Available</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+      <div className="bg-white shadow-lg rounded-lg overflow-auto mt-6 mb-8">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Schedule Overview</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTimeViewMode('grid')}
+              className={`p-1 rounded ${timeViewMode === 'grid' ? 'bg-primary text-white' : 'bg-gray-100'}`}
+            >
+              <Grid size={16} />
+            </button>
+            <button
+              onClick={() => setTimeViewMode('list')}
+              className={`p-1 rounded ${timeViewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-100'}`}
+            >
+              <List size={16} />
+            </button>
           </div>
         </div>
+
+        {timeViewMode === 'grid' ? (
+          <div className="overflow-x-auto p-4">
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="p-2 border-b-2 border-r bg-gray-50 sticky left-0 z-10">Time</th>
+                  {bookings
+                    .filter(b => b.tables && b.tables.length > 0)
+                    .flatMap(b => b.tables)
+                    .filter((table, index, self) =>
+                      self.findIndex(t => t._id === table._id) === index
+                    )
+                    .sort((a, b) => {
+                      const aNum = parseInt(a.tableNumber.replace(/\D/g, '')) || 0;
+                      const bNum = parseInt(b.tableNumber.replace(/\D/g, '')) || 0;
+                      return aNum - bNum;
+                    })
+                    .map(table => (
+                      <th key={table._id} className="p-2 border-b-2 text-center min-w-[120px]">
+                        <div className="font-medium">Table {table.tableNumber}</div>
+                        <div className="text-xs text-gray-500">{table.capacity} seats</div>
+                      </th>
+                    ))
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                {timeSlots.map((slot, idx) => {
+                  const timeStr = slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                  return (
+                    <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="p-2 border-r font-medium sticky left-0 z-10" style={{ backgroundColor: idx % 2 === 0 ? '#f9fafb' : '#ffffff' }}>
+                        {timeStr}
+                      </td>
+
+                      {bookings
+                        .filter(b => b.tables && b.tables.length > 0)
+                        .flatMap(b => b.tables)
+                        .filter((table, index, self) =>
+                          self.findIndex(t => t._id === table._id) === index
+                        )
+                        .sort((a, b) => {
+                          const aNum = parseInt(a.tableNumber.replace(/\D/g, '')) || 0;
+                          const bNum = parseInt(b.tableNumber.replace(/\D/g, '')) || 0;
+                          return aNum - bNum;
+                        })
+                        .map(table => {
+                          // Find bookings for this table at this time slot
+                          const bookingsAtTime = bookings.filter(booking => {
+                            if (!booking.tables) return false;
+
+                            const startTime = new Date(booking.timeSlot.start);
+                            const endTime = new Date(booking.timeSlot.end);
+                            const isForThisTable = booking.tables.some(t => t._id === table._id);
+
+                            return isForThisTable && startTime <= slot && endTime > slot;
+                          });
+
+                          if (bookingsAtTime.length === 0) {
+                            return <td key={table._id} className="border p-2"></td>;
+                          }
+
+                          const booking = bookingsAtTime[0];
+                          const startTime = new Date(booking.timeSlot.start);
+                          const isStart = startTime.getHours() === slot.getHours() &&
+                                          startTime.getMinutes() === slot.getMinutes();
+
+                          // Style based on booking status
+                          let statusClass = '';
+                          switch(booking.status) {
+                            case 'confirmed': statusClass = 'bg-blue-100 text-blue-800 border-blue-300'; break;
+                            case 'seated': statusClass = 'bg-green-100 text-green-800 border-green-300'; break;
+                            case 'pending': statusClass = 'bg-yellow-100 text-yellow-800 border-yellow-300'; break;
+                            case 'cancelled': statusClass = 'bg-red-100 text-red-800 border-red-300'; break;
+                            case 'no-show': statusClass = 'bg-gray-100 text-gray-800 border-gray-300'; break;
+                            default: statusClass = 'bg-purple-100 text-purple-800 border-purple-300';
+                          }
+
+                          return (
+                            <td key={table._id} className={`border p-1 ${statusClass}`}>
+                              {isStart ? (
+                                <div className="text-xs">
+                                  <div className="font-medium">{booking.customer.name}</div>
+                                  <div>{booking.partySize} guests</div>
+                                  <div>{formatTime(booking.timeSlot.start)}</div>
+                                </div>
+                              ) : (
+                                <div className="h-5 border-t border-dashed border-current opacity-50"></div>
+                              )}
+                            </td>
+                          );
+                        })
+                      }
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-auto p-4">
+            <div className="space-y-4">
+              {timeSlots.map((slot, idx) => {
+                const timeStr = slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const bookingsAtTime = bookings.filter(booking => {
+                  const startTime = new Date(booking.timeSlot.start);
+                  const endTime = new Date(booking.timeSlot.end);
+                  return startTime <= slot && endTime > slot;
+                });
+
+                return (
+                  <div key={idx} className={`p-3 rounded-lg ${idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                    <div className="font-medium text-lg mb-2 flex items-center">
+                      <Clock className="mr-2 text-primary" size={18} />
+                      {timeStr}
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({bookingsAtTime.length} {bookingsAtTime.length === 1 ? 'booking' : 'bookings'})
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {bookingsAtTime.length > 0 ? (
+                        bookingsAtTime.map(booking => {
+                          let statusClass = '';
+                          switch(booking.status) {
+                            case 'confirmed': statusClass = 'bg-blue-100 text-blue-800 border-blue-300'; break;
+                            case 'seated': statusClass = 'bg-green-100 text-green-800 border-green-300'; break;
+                            case 'pending': statusClass = 'bg-yellow-100 text-yellow-800 border-yellow-300'; break;
+                            case 'cancelled': statusClass = 'bg-red-100 text-red-800 border-red-300'; break;
+                            case 'no-show': statusClass = 'bg-gray-100 text-gray-800 border-gray-300'; break;
+                            default: statusClass = 'bg-purple-100 text-purple-800 border-purple-300';
+                          }
+
+                          return (
+                            <div key={booking._id} className={`p-2 rounded border ${statusClass} flex justify-between`}>
+                              <div>
+                                <div className="font-medium">{booking.customer.name}</div>
+                                <div className="text-xs">{booking.partySize} guests • {formatTime(booking.timeSlot.start)} - {formatTime(booking.timeSlot.end)}</div>
+                              </div>
+                              <div className="text-xs">
+                                {booking.tables && booking.tables.map(table => (
+                                  <span key={table._id} className="ml-1 inline-block px-1 bg-white rounded">
+                                    {table.tableNumber}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="col-span-full text-sm text-gray-500 text-center py-1">
+                          No bookings at this time
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -345,6 +525,75 @@ const AdminDashboard = ({ onLogout }) => {
         <main className="p-6">
           {activeView === 'bookings' && (
             <div>
+              {/* Stats Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-gray-500 text-sm">Total Bookings</h4>
+                    <span className="bg-blue-50 text-blue-600 p-1 rounded">
+                      <User size={16} />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold">{statisticsData.total}</div>
+                  <div className="text-xs text-gray-500">For {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-gray-500 text-sm">Confirmed</h4>
+                    <span className="bg-blue-50 text-blue-600 p-1 rounded">
+                      <CheckCircle size={16} />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold">{statisticsData.confirmed}</div>
+                  <div className="text-xs text-gray-500">{((statisticsData.confirmed / statisticsData.total) * 100 || 0).toFixed(0)}% of bookings</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-gray-500 text-sm">Seated</h4>
+                    <span className="bg-green-50 text-green-600 p-1 rounded">
+                      <UsersIcon size={16} />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold">{statisticsData.seated}</div>
+                  <div className="text-xs text-gray-500">{((statisticsData.seated / statisticsData.total) * 100 || 0).toFixed(0)}% of bookings</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-gray-500 text-sm">Pending</h4>
+                    <span className="bg-yellow-50 text-yellow-600 p-1 rounded">
+                      <ClockIcon size={16} />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold">{statisticsData.pending}</div>
+                  <div className="text-xs text-gray-500">{((statisticsData.pending / statisticsData.total) * 100 || 0).toFixed(0)}% of bookings</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-gray-500 text-sm">Cancelled</h4>
+                    <span className="bg-red-50 text-red-600 p-1 rounded">
+                      <XCircle size={16} />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold">{statisticsData.cancelled}</div>
+                  <div className="text-xs text-gray-500">{((statisticsData.cancelled / statisticsData.total) * 100 || 0).toFixed(0)}% of bookings</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-gray-500 text-sm">No Show</h4>
+                    <span className="bg-gray-50 text-gray-600 p-1 rounded">
+                      <AlertTriangle size={16} />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold">{statisticsData.noShow}</div>
+                  <div className="text-xs text-gray-500">{((statisticsData.noShow / statisticsData.total) * 100 || 0).toFixed(0)}% of bookings</div>
+                </div>
+              </div>
+
               {/* Filters and Search */}
               <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
@@ -374,7 +623,14 @@ const AdminDashboard = ({ onLogout }) => {
                     <Download size={16} className="mr-1" />
                     Export CSV
                   </button>
-                  {generateTimeGrid()}
+
+                  <button
+                    onClick={fetchBookings}
+                    className="flex items-center px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    <RefreshCw size={16} className="mr-1" />
+                    Refresh
+                  </button>
                 </div>
 
                 <div className="relative w-full md:w-64">
@@ -389,9 +645,15 @@ const AdminDashboard = ({ onLogout }) => {
                 </div>
               </div>
 
+              {/* Time Grid View */}
+              {generateTimeGrid()}
+
               {/* Bookings Table */}
               {isLoading ? (
-                <div className="text-center py-12">Loading bookings...</div>
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="mt-2">Loading bookings...</p>
+                </div>
               ) : filteredBookings.length > 0 ? (
                 <div className="bg-white shadow-lg rounded-lg overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -440,7 +702,10 @@ const AdminDashboard = ({ onLogout }) => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              {booking.tables.map(t => t.tableNumber).join(', ')}
+                              {booking.tables && booking.tables.length > 0
+                                ? booking.tables.map(t => t.tableNumber).join(', ')
+                                : <span className="text-yellow-500">Unassigned</span>
+                              }
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -553,7 +818,7 @@ const AdminDashboard = ({ onLogout }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium mb-2">Today's Summary</h4>
-                  <div className="text-2xl font-bold">{bookings.filter(b => b.status !== 'cancelled' && b.status !== 'no-show').length}</div>
+                  <div className="text-2xl font-bold">{statisticsData.total - statisticsData.cancelled - statisticsData.noShow}</div>
                   <p className="text-sm text-gray-600">Active bookings</p>
                 </div>
 

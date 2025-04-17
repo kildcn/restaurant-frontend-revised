@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import BookingForm from './BookingForm';
-import { Calendar, MapPin, Phone, Mail, Clock, Users } from 'lucide-react';
+import { Calendar, MapPin, Phone, Mail, Clock, Users, Utensils, Wine, Star } from 'lucide-react';
 
-const Homepage = () => {
+const Homepage = ({ restaurantInfo }) => {
   const [showBooking, setShowBooking] = useState(false);
 
   const handleBookingClick = () => {
@@ -20,7 +20,7 @@ const Homepage = () => {
              background: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(/api/placeholder/1200/800) center/cover no-repeat'
            }}>
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">L'Eustache</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display">L'Eustache</h1>
           <p className="text-xl mb-6">A casual French bistro with organic, local and seasonal cuisine</p>
           <button
             onClick={handleBookingClick}
@@ -31,11 +31,27 @@ const Homepage = () => {
         </div>
       </div>
 
+      {/* Quick Booking Banner */}
+      <div className="bg-primary text-white py-3 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center">
+          <div className="flex items-center mb-2 sm:mb-0">
+            <Calendar className="mr-2" size={20} />
+            <span>Looking for a table? Book directly online!</span>
+          </div>
+          <button
+            onClick={handleBookingClick}
+            className="px-4 py-1 bg-white text-primary rounded hover:bg-gray-100 transition-colors"
+          >
+            Reserve Now
+          </button>
+        </div>
+      </div>
+
       {/* About Section */}
       <div className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Welcome to L'Eustache</h2>
+            <h2 className="text-3xl font-bold mb-4 text-primary font-display">Welcome to L'Eustache</h2>
             <p className="text-xl mb-4 max-w-3xl mx-auto">
               We are a casual French bistro with an organic, local and seasonal cuisine accompanied by living wines!
             </p>
@@ -48,7 +64,7 @@ const Homepage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
             <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
               <div className="flex justify-center mb-4">
-                <Users size={40} className="text-primary" />
+                <Utensils size={40} className="text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Seasonal Cuisine</h3>
               <p>
@@ -58,26 +74,120 @@ const Homepage = () => {
 
             <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
               <div className="flex justify-center mb-4">
-                <Clock size={40} className="text-primary" />
+                <Wine size={40} className="text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Opening Hours</h3>
+              <h3 className="text-xl font-semibold mb-2">Living Wines</h3>
               <p>
-                <strong>Wednesday - Saturday</strong><br />
-                6:00 PM - 11:45 PM<br />
-                <span className="text-sm text-gray-600">Last reservation at 9:45 PM</span>
+                Discover our selection of natural and biodynamic wines that perfectly complement our dishes.
               </p>
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
               <div className="flex justify-center mb-4">
+                <Star size={40} className="text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Authentic Experience</h3>
+              <p>
+                Enjoy the warm atmosphere and authentic French hospitality in the heart of Berlin.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Opening Hours and Contact Info */}
+      <div className="bg-gray-100 py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div className="flex justify-center mb-4">
+                <Clock size={40} className="text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-4 text-center">Opening Hours</h3>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="font-medium">Monday</span>
+                  <span className="text-gray-500">Closed</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="font-medium">Tuesday</span>
+                  <span className="text-gray-500">Closed</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="font-medium">Wednesday</span>
+                  <span>6:00 PM - 11:45 PM</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="font-medium">Thursday</span>
+                  <span>6:00 PM - 11:45 PM</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="font-medium">Friday</span>
+                  <span>6:00 PM - 11:45 PM</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="font-medium">Saturday</span>
+                  <span>6:00 PM - 11:45 PM</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-medium">Sunday</span>
+                  <span className="text-gray-500">Closed</span>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm text-center text-gray-600">
+                Last reservation at 9:45 PM
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div className="flex justify-center mb-4">
                 <MapPin size={40} className="text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Find Us</h3>
-              <p>
-                Weisestraße 49, 12049 Berlin<br />
-                <Phone className="inline mr-1" size={14} /> 0163 5172664<br />
-                <Mail className="inline mr-1" size={14} /> restaurantleustache@gmail.com
-              </p>
+              <h3 className="text-xl font-semibold mb-4 text-center">Contact & Location</h3>
+
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <MapPin className="mr-3 mt-1 text-primary" size={20} />
+                  <div>
+                    <p className="font-medium">Address</p>
+                    <p className="text-gray-600">Weisestraße 49, 12049 Berlin</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <Phone className="mr-3 mt-1 text-primary" size={20} />
+                  <div>
+                    <p className="font-medium">Phone</p>
+                    <p className="text-gray-600">
+                      <a href="tel:01635172664" className="hover:text-primary">0163 5172664</a>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <Mail className="mr-3 mt-1 text-primary" size={20} />
+                  <div>
+                    <p className="font-medium">Email</p>
+                    <p className="text-gray-600">
+                      <a href="mailto:restaurantleustache@gmail.com" className="hover:text-primary">restaurantleustache@gmail.com</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <a
+                  href="https://maps.google.com/?q=Weisestraße 49, 12049 Berlin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+                >
+                  <MapPin size={16} className="mr-2" />
+                  View on Map
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -85,10 +195,26 @@ const Homepage = () => {
 
       {/* Booking Section */}
       {showBooking && (
-        <div id="booking-section" className="py-16 px-4 bg-gray-50">
+        <div id="booking-section" className="py-16 px-4 bg-white">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-8 text-primary">Make a Reservation</h2>
-            <BookingForm />
+            <h2 className="text-3xl font-bold text-center mb-8 text-primary font-display">Make a Reservation</h2>
+            <BookingForm restaurantInfo={restaurantInfo} />
+          </div>
+        </div>
+      )}
+
+      {/* Call to Action */}
+      {!showBooking && (
+        <div className="bg-primary text-white py-16 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-4 font-display">Ready to Experience L'Eustache?</h2>
+            <p className="text-xl mb-8">Reserve your table now and enjoy our seasonal French cuisine</p>
+            <button
+              onClick={handleBookingClick}
+              className="px-8 py-3 bg-white text-primary rounded-md font-medium text-lg hover:bg-gray-100 transition-colors"
+            >
+              Book a Table
+            </button>
           </div>
         </div>
       )}

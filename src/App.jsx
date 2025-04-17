@@ -3,7 +3,7 @@ import Homepage from './components/Homepage';
 import AdminDashboard from './components/AdminDashboard';
 import BookingConfirmation from './components/BookingConfirmation';
 import apiService from './services/api';
-import { Calendar } from 'lucide-react';
+import { Calendar, Info } from 'lucide-react';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
@@ -14,8 +14,9 @@ const App = () => {
   const [bookingEmail, setBookingEmail] = useState('');
   const [bookingLookupError, setBookingLookupError] = useState('');
   const [bookingData, setBookingData] = useState(null);
+  const [notification, setNotification] = useState(null);
 
-  // Add this function definition
+  // Lookup booking function
   const lookupBooking = async (reference, email) => {
     setIsLoading(true);
     setBookingLookupError('');
@@ -32,12 +33,24 @@ const App = () => {
       if (response.success) {
         setBookingData(response.booking);
         setCurrentPage('booking-details');
+        setNotification({
+          type: 'success',
+          message: 'Booking found successfully!'
+        });
       } else {
         setBookingLookupError(response.error || 'Booking not found');
+        setNotification({
+          type: 'error',
+          message: response.error || 'Booking not found. Please check your details and try again.'
+        });
       }
     } catch (error) {
       console.error('Error looking up booking:', error);
       setBookingLookupError('An error occurred while looking up your booking');
+      setNotification({
+        type: 'error',
+        message: 'An error occurred while looking up your booking. Please try again later.'
+      });
     }
 
     setIsLoading(false);
@@ -131,14 +144,23 @@ const App = () => {
       if (response.success) {
         setIsAuthenticated(true);
         setCurrentPage('admin');
+        setNotification({
+          type: 'success',
+          message: 'Successfully logged in!'
+        });
       } else {
         console.error('Login failed:', response.error);
-        // You should show this error to the user
-        alert('Login failed: ' + response.error);
+        setNotification({
+          type: 'error',
+          message: 'Login failed: ' + (response.error || 'Invalid credentials')
+        });
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('An unexpected error occurred during login');
+      setNotification({
+        type: 'error',
+        message: 'An unexpected error occurred during login'
+      });
     }
 
     setIsLoading(false);
@@ -149,6 +171,10 @@ const App = () => {
     apiService.auth.logout();
     setIsAuthenticated(false);
     setCurrentPage('home');
+    setNotification({
+      type: 'success',
+      message: 'Successfully logged out'
+    });
   };
 
   // Navigation handlers
@@ -159,47 +185,23 @@ const App = () => {
   // Booking lookup handler
   const handleBookingLookup = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setBookingLookupError('');
+    await lookupBooking(bookingReference, bookingEmail);
+  };
 
-    if (!bookingReference || !bookingEmail) {
-      setBookingLookupError('Please provide both reference number and email');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      console.log('Looking up booking with:', {
-        reference: bookingReference,
-        email: bookingEmail
-      });
-
-      const response = await apiService.bookings.lookupBooking(
-        bookingReference,
-        bookingEmail
-      );
-
-      console.log('Lookup response:', response);
-
-      if (response.success) {
-        setBookingData(response.booking);
-        setCurrentPage('booking-details');
-      } else {
-        setBookingLookupError(response.error || 'Booking not found');
-      }
-    } catch (error) {
-      console.error('Error looking up booking:', error);
-      setBookingLookupError('An error occurred while looking up your booking');
-    }
-
-    setIsLoading(false);
+  // Dismiss notification
+  const dismissNotification = () => {
+    setNotification(null);
   };
 
   // Render the appropriate page
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Homepage onBookingClick={() => {}} onLogin={() => navigateTo('login')} />;
+        return <Homepage
+          onBookingClick={() => {}}
+          onLogin={() => navigateTo('login')}
+          restaurantInfo={restaurantInfo}
+        />;
       case 'login':
         return isAuthenticated ?
           <AdminDashboard onLogout={handleLogout} /> :
@@ -250,10 +252,39 @@ const App = () => {
   }
 
   return (
-    <div className="app min-h-screen bg-gray-50">
+    <div className="app min-h-screen bg-gray-50 relative">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 ${notification.type === 'success' ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500'} border-l-4 p-4 rounded shadow-md max-w-sm`}>
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <Info className={notification.type === 'success' ? 'text-green-500' : 'text-red-500'} size={20} />
+            </div>
+            <div className="ml-3">
+              <p className={`text-sm ${notification.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                {notification.message}
+              </p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={dismissNotification}
+                  className={`inline-flex rounded-md p-1.5 ${notification.type === 'success' ? 'text-green-500 hover:bg-green-200' : 'text-red-500 hover:bg-red-200'} focus:outline-none focus:ring-2 focus:ring-offset-2 ${notification.type === 'success' ? 'focus:ring-green-500' : 'focus:ring-red-500'}`}
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation overlay for quick actions */}
       {currentPage === 'home' && (
-        <div className="fixed top-4 right-4 z-50 flex space-x-2">
+        <div className="fixed top-4 right-4 z-40 flex space-x-2">
           <button
             onClick={() => navigateTo('booking-lookup')}
             className="px-3 py-1 bg-white text-primary border border-primary rounded-md shadow-md hover:bg-primary-light hover:bg-opacity-10 transition-colors"
@@ -261,11 +292,11 @@ const App = () => {
             Find My Booking
           </button>
           <button
-  onClick={() => navigateTo('login')}
-  className="px-3 py-1 bg-primary text-white rounded-md shadow-md hover:bg-primary-dark transition-colors"
->
-  Admin Access
-</button>
+            onClick={() => navigateTo('login')}
+            className="px-3 py-1 bg-primary text-white rounded-md shadow-md hover:bg-primary-dark transition-colors"
+          >
+            Admin Access
+          </button>
         </div>
       )}
 
@@ -340,7 +371,7 @@ const LoginPage = ({ onLogin }) => {
   );
 };
 
-// Booking lookup page
+// Booking lookup page - enhanced
 const BookingLookupPage = ({ onLookup, reference, setReference, email, setEmail, error }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
