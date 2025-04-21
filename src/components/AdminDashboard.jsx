@@ -16,6 +16,7 @@ const AdminDashboard = ({ onLogout }) => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [timeViewMode, setTimeViewMode] = useState('grid'); // 'grid' or 'list'
   const [statisticsData, setStatisticsData] = useState({
     total: 0,
@@ -217,8 +218,7 @@ const AdminDashboard = ({ onLogout }) => {
 
                           const booking = bookingsAtTime[0];
                           const startTime = new Date(booking.timeSlot.start);
-                          const isStart = startTime.getHours() === slot.getHours() &&
-                                          startTime.getMinutes() === slot.getMinutes();
+                          const isStart = moment(startTime).format('HH:mm') === moment(slot).format('HH:mm');
 
                           // Style based on booking status
                           let statusClass = '';

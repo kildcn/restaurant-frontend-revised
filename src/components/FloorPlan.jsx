@@ -23,6 +23,8 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [tableAssignments, setTableAssignments] = useState({});
   const [attentionNeeded, setAttentionNeeded] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
 
   const floorPlanRef = useRef(null);
 
@@ -70,6 +72,15 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
     return () => clearInterval(interval);
   }, [date, timeSlots]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Generate time slots when restaurant info is loaded
   useEffect(() => {
     if (bookings && bookings.length > 0) {
@@ -86,13 +97,25 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
     }
   }, [bookings, timeSlotView, timeFilter]);
 
+  const getBookingColor = (bookingId) => {
+    // Simple hash function to convert booking ID to a number
+    let hash = 0;
+    for (let i = 0; i < bookingId?.length || 0; i++) {
+      hash = bookingId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Generate distinct, vibrant colors
+    const hue = Math.abs(hash % 360);
+    return `hsl(${hue}, 70%, 65%)`;
+  };
+
   // Generate time slots from restaurant hours
   const generateTimeSlots = () => {
-    // For this example, we'll use fixed times from 18:00 to 23:00 with 30-minute intervals
+    // For this example, we'll use fixed times from 18:00 to 23:00 with 15-minute intervals
     // In a real implementation, this would come from restaurant settings
     const startHour = 18;
     const endHour = 23;
-    const intervalMinutes = 30;
+    const intervalMinutes = 15; // Changed from 30 to 15 minutes
 
     const slots = [];
     for (let hour = startHour; hour <= endHour; hour++) {
@@ -117,14 +140,21 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
     // Filter bookings for the currently selected time slot
     const relevantBookings = bookings.filter(booking => {
-      const bookingTime = moment(booking.timeSlot.start).format('HH:mm');
+      const bookingStartTime = moment(booking.timeSlot.start);
+      const bookingEndTime = moment(booking.timeSlot.end);
+
+      // Parse the current view time
+      const dateObj = moment(date).format('YYYY-MM-DD');
+      const currentViewTime = moment(`${dateObj} ${timeSlotView}`);
 
       if (timeFilter === 'all') return true;
       if (timeFilter === 'current') {
-        return bookingTime === timeSlotView;
+        // A booking is relevant if it spans the current time
+        return bookingStartTime.isSameOrBefore(currentViewTime) &&
+               bookingEndTime.isAfter(currentViewTime);
       }
       if (timeFilter === 'upcoming') {
-        return moment(bookingTime, 'HH:mm').isAfter(moment(timeSlotView, 'HH:mm'));
+        return bookingStartTime.isAfter(currentViewTime);
       }
       return true;
     });
@@ -147,14 +177,24 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
       const tableBookings = bookings.filter(booking => {
         if (!booking.tables) return false;
 
-        const bookingStart = moment(booking.timeSlot.start).format('HH:mm');
-        const bookingEnd = moment(booking.timeSlot.end).format('HH:mm');
-        const currentViewTime = timeSlotView;
+        const bookingStartTime = moment(booking.timeSlot.start);
+        const bookingEndTime = moment(booking.timeSlot.end);
 
+        // Parse the current view time
+        const dateObj = moment(date).format('YYYY-MM-DD');
+        const currentViewTime = moment(`${dateObj} ${timeSlotView}`);
+
+        // A booking is relevant if:
+        // For 'current' filter: booking spans the current time (starts before or at current time AND ends after current time)
+        // For 'upcoming' filter: booking starts after the current time
+        // For 'all' filter: always include
         const isInTimeRange =
           (timeFilter === 'all') ||
-          (timeFilter === 'current' && bookingStart === currentViewTime) ||
-          (timeFilter === 'upcoming' && moment(bookingStart, 'HH:mm').isAfter(moment(currentViewTime, 'HH:mm')));
+          (timeFilter === 'current' &&
+            bookingStartTime.isSameOrBefore(currentViewTime) &&
+            bookingEndTime.isAfter(currentViewTime)) ||
+          (timeFilter === 'upcoming' &&
+            bookingStartTime.isAfter(currentViewTime));
 
         return booking.tables.some(t => t._id === table._id) && isInTimeRange;
       });
@@ -589,42 +629,42 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
 
       {/* Time slot selector - horizontal scrollable */}
       <div className="relative bg-white p-2 rounded-lg shadow-sm">
-        <div className="flex items-center">
-          <button
-            onClick={handlePrevTimeSlot}
-            className="p-1 rounded hover:bg-gray-100"
-            disabled={activeTimeSlotIndex === 0}
-          >
-            <ChevronLeft size={20} className={activeTimeSlotIndex === 0 ? "text-gray-300" : "text-gray-600"} />
-          </button>
+  <div className="flex items-center justify-between">
+    <button
+      onClick={handlePrevTimeSlot}
+      className="p-1 rounded hover:bg-gray-100 flex-shrink-0"
+      disabled={activeTimeSlotIndex === 0}
+    >
+      <ChevronLeft size={20} className={activeTimeSlotIndex === 0 ? "text-gray-300" : "text-gray-600"} />
+    </button>
 
-          <div className="flex-1 flex overflow-x-auto py-2 hide-scrollbar justify-center">
-            <div className="flex space-x-1">
-              {timeSlots.map((timeSlot, index) => (
-                <button
-                  key={timeSlot}
-                  onClick={() => handleTimeSlotChange(index)}
-                  className={`px-4 py-2 rounded-md whitespace-nowrap transition-all ${
-                    index === activeTimeSlotIndex
-                      ? 'bg-primary text-white scale-110'
-                      : 'bg-white text-gray-700 border hover:bg-gray-50'
-                  }`}
-                >
-                  {moment(timeSlot, 'HH:mm').format('h:mm A')}
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="bg-white p-2 rounded-lg shadow-sm mb-4">
+  <div className="flex flex-wrap gap-1 justify-center px-2 py-1">
+    {timeSlots.map((timeSlot, index) => (
+      <button
+        key={timeSlot}
+        onClick={() => handleTimeSlotChange(index)}
+        className={`min-w-[70px] px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-md whitespace-nowrap transition-all ${
+          index === activeTimeSlotIndex
+            ? 'bg-primary text-white scale-105'
+            : 'bg-white text-gray-700 border hover:bg-gray-50'
+        }`}
+      >
+        {moment(timeSlot, 'HH:mm').format('h:mm A')}
+      </button>
+    ))}
+  </div>
+</div>
 
-          <button
-            onClick={handleNextTimeSlot}
-            className="p-1 rounded hover:bg-gray-100"
-            disabled={activeTimeSlotIndex === timeSlots.length - 1}
-          >
-            <ChevronRight size={20} className={activeTimeSlotIndex === timeSlots.length - 1 ? "text-gray-300" : "text-gray-600"} />
-          </button>
-        </div>
-      </div>
+    <button
+      onClick={handleNextTimeSlot}
+      className="p-1 rounded hover:bg-gray-100 flex-shrink-0"
+      disabled={activeTimeSlotIndex === timeSlots.length - 1}
+    >
+      <ChevronRight size={20} className={activeTimeSlotIndex === timeSlots.length - 1 ? "text-gray-300" : "text-gray-600"} />
+    </button>
+  </div>
+</div>
 
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Floor Plan Area */}
@@ -740,6 +780,7 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
               const { status, color, textColor, gradient, booking } = getTableStatus(table._id);
               const groupedTables = getGroupedTables(table._id);
               const isGrouped = groupedTables.length > 0;
+              const groupColor = booking ? getBookingColor(booking._id) : '';
               const isHovered = hoveredTable === table._id;
               const hasAttention = booking && needsAttention(booking);
 
@@ -765,11 +806,11 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                     top: `${table.y}px`,
                     width: `${table.width}px`,
                     height: `${table.height}px`,
-                    backgroundColor: color,
-                    background: gradient || color,
+                    backgroundColor: isGrouped ? groupColor : color, // Use the group color if it's grouped
+                    background: isGrouped ? groupColor : (gradient || color),
                     color: textColor,
                     borderRadius: table.shape === 'round' ? '50%' : '4px',
-                    border: isGrouped ? '2px dashed #b22222' : hasAttention ? '2px solid #ef4444' : 'none',
+                    border: isGrouped ? `3px solid ${booking ? getBookingColor(booking._id) : '#b22222'}` : hasAttention ? '2px solid #ef4444' : 'none',
                     boxShadow: isHovered || (selectedTable && selectedTable._id === table._id) ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none',
                     transform: isHovered ? 'scale(1.05)' : 'scale(1)',
                     zIndex: selectedTable && selectedTable._id === table._id ? 50 : isHovered ? 40 : 10
@@ -827,6 +868,16 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                 const groupedTable = floorPlanData.find(t => t._id === groupedId);
                 if (!groupedTable) return null;
 
+                // Find booking for this table group
+                const groupBooking = bookings.find(booking =>
+                  booking.tables &&
+                  booking.tables.some(t => t._id === table._id) &&
+                  booking.tables.some(t => t._id === groupedId)
+                );
+
+                // Use the booking color for the connecting line
+                const lineColor = groupBooking ? getBookingColor(groupBooking._id) : '#b22222';
+
                 // Calculate line position
                 const x1 = table.x + table.width / 2;
                 const y1 = table.y + table.height / 2;
@@ -845,8 +896,8 @@ const FloorPlan = ({ date, bookings, updateBookingStatus }) => {
                       left: `${x1}px`,
                       top: `${y1}px`,
                       width: `${length}px`,
-                      height: '2px',
-                      backgroundColor: '#b22222',
+                      height: '3px', // Make the line thicker
+                      backgroundColor: lineColor, // Use booking-specific color
                       transform: `rotate(${angle}deg)`,
                       zIndex: 5
                     }}
