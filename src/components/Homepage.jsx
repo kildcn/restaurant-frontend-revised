@@ -15,37 +15,21 @@ const Homepage = ({ restaurantInfo }) => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
-      <div className="relative flex items-center justify-center h-96 text-white text-center px-4"
-           style={{
-             background: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(/api/placeholder/1200/800) center/cover no-repeat'
-           }}>
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display">L'Eustache</h1>
-          <p className="text-xl mb-6">A casual French bistro with organic, local and seasonal cuisine</p>
-          <button
-            onClick={handleBookingClick}
-            className="px-6 py-3 rounded-md text-white font-medium text-lg shadow-lg bg-primary hover:bg-primary-dark transition-colors"
-          >
-            Reserve a Table
-          </button>
-        </div>
-      </div>
-
-      {/* Quick Booking Banner */}
-      <div className="bg-primary text-white py-3 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center">
-          <div className="flex items-center mb-2 sm:mb-0">
-            <Calendar className="mr-2" size={20} />
-            <span>Looking for a table? Book directly online!</span>
-          </div>
-          <button
-            onClick={handleBookingClick}
-            className="px-4 py-1 bg-white text-primary rounded hover:bg-gray-100 transition-colors"
-          >
-            Reserve Now
-          </button>
-        </div>
-      </div>
+<div className="relative flex items-center justify-center h-96 text-white text-center px-4"
+     style={{
+       background: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://thegoldenbun.com/wp-content/uploads/2018/10/LEustache-French-restaurant-Berlin-restaurant-Schillerkiez-Berlin1.jpg) center/cover no-repeat'
+     }}>
+  <div className="max-w-3xl mx-auto">
+    <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display">L'Eustache</h1>
+    <p className="text-xl mb-6">A casual French bistro with organic, local and seasonal cuisine</p>
+    <button
+      onClick={handleBookingClick}
+      className="px-6 py-3 rounded-md text-white font-medium text-lg shadow-lg bg-primary hover:bg-primary-dark transition-colors"
+    >
+      Reserve a Table
+    </button>
+  </div>
+</div>
 
       {/* About Section */}
       <div className="py-16 px-4">
