@@ -17,7 +17,7 @@ const UnifiedBookingForm = ({
 }) => {
   // Form state (Step-by-step approach)
   const [step, setStep] = useState(1); // 1: Party Size, 2: Date, 3: Time, 4: Details
-  const [partySize, setPartySize] = useState(booking?.partySize || null);
+  const [partySize, setPartySize] = useState(booking?.partySize || (isAdmin && booking ? booking.partySize : null));
   const [date, setDate] = useState(booking ? moment(booking.date).format('YYYY-MM-DD') : defaultDate || '');
   const [time, setTime] = useState(booking ? moment(booking.timeSlot.start).format('HH:mm') : defaultTime || '');
   const [duration, setDuration] = useState(booking?.duration || 120);
@@ -45,7 +45,9 @@ const UnifiedBookingForm = ({
   useEffect(() => {
     if (booking && isAdmin) {
       setStep(4);
-      fetchAvailableTables();
+      if (partySize) {
+        fetchAvailableTables();
+      }
     }
   }, [booking, isAdmin]);
 
@@ -63,12 +65,12 @@ const UnifiedBookingForm = ({
     }
   }, [date, partySize, restaurantInfo]);
 
-  // Fetch available tables when time is selected (admin only)
+  // Fetch available tables when time is selected (admin only) or when editing booking
   useEffect(() => {
-    if (isAdmin && date && time && partySize && step >= 3) {
+    if (isAdmin && date && time && partySize && (step >= 3 || booking)) {
       fetchAvailableTables();
     }
-  }, [isAdmin, date, time, partySize, step, allowOutdoorTables]);
+  }, [isAdmin, date, time, partySize, step, allowOutdoorTables, booking]);
 
   const checkAvailableDates = async () => {
     setIsDateLoading(true);
@@ -189,15 +191,20 @@ const UnifiedBookingForm = ({
 
     try {
       const response = await apiService.tables.getTables();
+      console.log('Fetched tables for booking form:', response); // Debug log
+
       if (response.success) {
         let tables = response.data || [];
+        console.log('Available tables before filtering:', tables); // Debug log
 
         // Filter out tables with insufficient capacity
         tables = tables.filter(table => table.capacity >= partySize);
+        console.log('Tables after capacity filter:', tables); // Debug log
 
         // Filter out outdoor tables if not allowed
         if (!allowOutdoorTables) {
           tables = tables.filter(table => table.section !== 'outdoor');
+          console.log('Tables after outdoor filter:', tables); // Debug log
         }
 
         // If editing, include currently assigned tables
@@ -210,6 +217,9 @@ const UnifiedBookingForm = ({
         }
 
         setAvailableTables(tables);
+        console.log('Final available tables:', tables); // Debug log
+      } else {
+        console.error('Failed to fetch tables:', response.error);
       }
     } catch (error) {
       console.error('Error fetching tables:', error);
@@ -652,6 +662,9 @@ const UnifiedBookingForm = ({
                             isSelected ? 'text-white' : 'text-gray-500'
                           }`}>
                             {table.section || 'indoor'}
+                            {table.isCurrentlyAssigned && (
+                              <span className="ml-1">(assigned)</span>
+                            )}
                           </div>
                         </div>
                       );
@@ -659,7 +672,7 @@ const UnifiedBookingForm = ({
                   </div>
                   {availableTables.length === 0 && (
                     <div className="text-center text-gray-500 py-4">
-                      No available tables for the selected criteria
+                      No tables found. Please ensure tables exist in the system.
                     </div>
                   )}
                 </div>

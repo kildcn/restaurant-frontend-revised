@@ -1,6 +1,6 @@
 // src/components/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { Clock, Users, LogOut, Settings, Calendar, AlertCircle, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, PlusCircle, Edit3 } from 'lucide-react';
+import { Clock, Users, LogOut, Settings, Calendar, AlertCircle, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, PlusCircle, Edit3, List } from 'lucide-react';
 import SimplifiedFloorPlan from './SimplifiedFloorPlan';
 import SimplifiedSettings from './SimplifiedSettings';
 import UnifiedBookingForm from './UnifiedBookingForm';
@@ -8,7 +8,7 @@ import apiService from '../services/api';
 import moment from 'moment';
 
 const AdminDashboard = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState('bookings'); // Default to bookings list
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
@@ -24,11 +24,6 @@ const AdminDashboard = ({ onLogout }) => {
   });
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [editingBooking, setEditingBooking] = useState(null);
-
-  // Debug active tab
-  useEffect(() => {
-    console.log('Active tab changed to:', activeTab);
-  }, [activeTab]);
 
   useEffect(() => {
     fetchRestaurantInfo();
@@ -299,23 +294,36 @@ const AdminDashboard = ({ onLogout }) => {
           {/* Tabs */}
           <div className="flex space-x-8 border-b border-gray-200">
             <button
-              onClick={() => setActiveTab('today')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'today'
+              onClick={() => setActiveTab('bookings')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'bookings'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
+              <List size={18} className="mr-2" />
+              Bookings List
+            </button>
+            <button
+              onClick={() => setActiveTab('floorplan')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'floorplan'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Calendar size={18} className="mr-2" />
               Floor Plan
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                 activeTab === 'settings'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
+              <Settings size={18} className="mr-2" />
               Settings
             </button>
           </div>
@@ -324,11 +332,8 @@ const AdminDashboard = ({ onLogout }) => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Debugging */}
-        <div className="text-xs text-gray-500 mb-2">Current Tab: {activeTab}</div>
-
-        {/* Time Selector - Always visible for Today and Floor Plan tabs */}
-        {(activeTab === 'today' || activeTab === 'floorplan') && (
+        {/* Time Selector - Visible for Bookings and Floor Plan tabs */}
+        {(activeTab === 'bookings' || activeTab === 'floorplan') && (
           <div className="mb-6 bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -380,7 +385,8 @@ const AdminDashboard = ({ onLogout }) => {
           </div>
         )}
 
-        {activeTab === 'today' && (
+        {/* Bookings List Tab */}
+        {activeTab === 'bookings' && (
           <div className="space-y-6">
             {/* Alerts */}
             {alerts.length > 0 && (
@@ -456,11 +462,11 @@ const AdminDashboard = ({ onLogout }) => {
               </div>
             </div>
 
-            {/* Timeline View with Time Filter */}
+            {/* Bookings List */}
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
-                  Bookings at {moment(selectedTime, 'HH:mm').format('h:mm A')}
+                  All Bookings for {moment(selectedDate).format('MMMM D, YYYY')}
                 </h3>
               </div>
               <div className="px-4 py-5 sm:p-6">
@@ -469,9 +475,9 @@ const AdminDashboard = ({ onLogout }) => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-2 text-gray-500">Loading bookings...</p>
                   </div>
-                ) : getBookingsForTimeSlot().length > 0 ? (
+                ) : bookings.length > 0 ? (
                   <div className="space-y-4">
-                    {getBookingsForTimeSlot().map((booking) => (
+                    {bookings.map((booking) => (
                       <div
                         key={booking._id}
                         className="flex items-center border rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -499,6 +505,11 @@ const AdminDashboard = ({ onLogout }) => {
                           {!booking.isAdminBooking && booking.tables?.some(t => t.section === 'outdoor') && (
                             <div className="text-xs text-red-600 font-medium mt-1">
                               Customer booking assigned to outdoor table (should be indoor only)
+                            </div>
+                          )}
+                          {booking.specialRequests && (
+                            <div className="text-sm text-gray-600 mt-1">
+                              Note: {booking.specialRequests}
                             </div>
                           )}
                         </div>
@@ -531,7 +542,7 @@ const AdminDashboard = ({ onLogout }) => {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    No bookings at the selected time.
+                    No bookings for this date.
                   </div>
                 )}
               </div>
