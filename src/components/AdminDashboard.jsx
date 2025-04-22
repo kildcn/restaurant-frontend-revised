@@ -1,7 +1,7 @@
 // src/components/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { Clock, Users, LogOut, Settings, Calendar, AlertCircle, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, PlusCircle, Edit3, List } from 'lucide-react';
-import SimplifiedFloorPlan from './SimplifiedFloorPlan';
+import EnhancedFloorPlan from './EnhancedFloorPlan';
 import SimplifiedSettings from './SimplifiedSettings';
 import UnifiedBookingForm from './UnifiedBookingForm';
 import apiService from '../services/api';
@@ -553,7 +553,7 @@ const AdminDashboard = ({ onLogout }) => {
         {/* Floor Plan Tab */}
         {activeTab === 'floorplan' && (
           <div className="space-y-6">
-            <SimplifiedFloorPlan
+            <EnhancedFloorPlan
               date={selectedDate}
               selectedTime={selectedTime}
               bookings={bookings}
