@@ -231,7 +231,10 @@ const BookingForm = () => {
         date,
         time,
         specialRequests,
-        duration: restaurantInfo?.bookingRules?.maxDuration || 120
+        duration: restaurantInfo?.bookingRules?.maxDuration || 120,
+        // Ensure customer bookings are restricted to indoor tables
+        isAdminBooking: false,
+        tablePreference: 'indoor'
       };
 
       const response = await apiService.bookings.createBooking(bookingDetails);

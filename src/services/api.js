@@ -80,18 +80,22 @@ const apiService = {
 
   // Booking endpoints
   bookings: {
-    checkAvailability: async (date, time, partySize) => {
+    checkAvailability: async (date, time, partySize, options = {}) => {
       try {
         // Ensure we always send a time parameter
         const requestTime = time || "18:00"; // Default to 6:00 PM if no time provided
 
-        console.log('Checking availability with params:', { date, time: requestTime, partySize });
+        console.log('Checking availability with params:', { date, time: requestTime, partySize, options });
 
-        const response = await apiClient.post('/bookings/check-availability', {
+        const requestData = {
           date,
           time: requestTime,
-          partySize
-        });
+          partySize,
+          // Ensure customer bookings only check indoor tables
+          indoorOnly: options.indoorOnly ?? true
+        };
+
+        const response = await apiClient.post('/bookings/check-availability', requestData);
 
         return { success: true, data: response.data };
       } catch (error) {
@@ -102,7 +106,14 @@ const apiService = {
 
     createBooking: async (bookingData) => {
       try {
-        const response = await apiClient.post('/bookings', bookingData);
+        // Ensure we mark customer bookings appropriately
+        const enhancedBookingData = {
+          ...bookingData,
+          isCustomerBooking: !bookingData.isAdminBooking,
+          tablePreference: bookingData.tablePreference || 'indoor'
+        };
+
+        const response = await apiClient.post('/bookings', enhancedBookingData);
         return { success: true, booking: response.data.data };
       } catch (error) {
         return { success: false, error: getErrorMessage(error) };

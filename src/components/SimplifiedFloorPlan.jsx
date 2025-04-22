@@ -35,21 +35,26 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
     const tablesWithPositions = new Map();
     const unassignedTables = new Set(tableData);
 
-    // Find all bookings at selected time
+    // Find all bookings at selected time (excluding cancelled)
     const selectedDateTime = moment(date + ' ' + selectedTime);
     const activeBookings = bookings.filter(booking =>
       booking.tables?.length > 0 &&
+      booking.status !== 'cancelled' &&
+      booking.status !== 'no-show' &&
       moment(booking.timeSlot.start).isSameOrBefore(selectedDateTime) &&
       moment(booking.timeSlot.end).isAfter(selectedDateTime)
     );
 
-    // Process grouped tables first
-    let nextPosition = { x: 100, y: 100 };
+    // Process grouped tables first - keep within viewport
+    const containerWidth = 800;
+    const containerHeight = 550;
+    const margin = 20;
+
     const sectionStartPositions = {
-      indoor: { x: 100, y: 100 },
-      outdoor: { x: 100, y: 400 },
-      bar: { x: 700, y: 100 },
-      window: { x: 20, y: 100 }
+      indoor: { x: margin + 20, y: margin + 40 },
+      outdoor: { x: margin + 20, y: 380 },
+      bar: { x: containerWidth - 200, y: margin + 40 },
+      window: { x: margin + 20, y: 120 }
     };
 
     activeBookings.forEach(booking => {
@@ -61,7 +66,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
         // Group these tables together
         const firstTable = bookingTables[0];
         const section = firstTable.section || 'indoor';
-        nextPosition = sectionStartPositions[section];
+        let nextPosition = sectionStartPositions[section];
 
         bookingTables.forEach((table, idx) => {
           const size = table.capacity <= 2 ? 50 : table.capacity <= 4 ? 60 : 70;
@@ -119,9 +124,14 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
       const startPos = sectionStartPositions[sectionName] || sectionStartPositions.indoor;
       sectionTables.forEach((table, index) => {
         const size = table.capacity <= 2 ? 50 : table.capacity <= 4 ? 60 : 70;
+
+        // Position tables within container bounds
+        const x = Math.min(startPos.x + (index % 4) * (size + 20), containerWidth - size - margin);
+        const y = Math.min(startPos.y + Math.floor(index / 4) * (size + 20), containerHeight - size - margin);
+
         const position = {
-          x: startPos.x + (index % 4) * (size + 20),
-          y: startPos.y + Math.floor(index / 4) * (size + 20),
+          x,
+          y,
           width: size,
           height: size,
           shape: table.capacity > 4 ? 'rect' : 'round'
@@ -162,6 +172,8 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
 
     const booking = bookings.find(b =>
       b.tables?.some(t => t._id === table._id) &&
+      b.status !== 'cancelled' &&
+      b.status !== 'no-show' &&
       moment(b.timeSlot.start).isSameOrBefore(selectedDateTime) &&
       moment(b.timeSlot.end).isAfter(selectedDateTime)
     );
@@ -192,6 +204,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
       return (!booking.tables || booking.tables.length === 0) &&
              booking.status !== 'cancelled' &&
              booking.status !== 'no-show' &&
+             booking.status !== 'completed' &&
              bookingStart.isSameOrBefore(selectedDateTime) &&
              bookingEnd.isAfter(selectedDateTime);
     });
@@ -234,7 +247,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
     const connections = [];
 
     bookings.forEach(booking => {
-      if (booking.tables && booking.tables.length > 1) {
+      if (booking.tables && booking.tables.length > 1 && booking.status !== 'cancelled' && booking.status !== 'no-show') {
         const bookingTables = getBookingTables(booking);
 
         bookingTables.sort((a, b) => {
@@ -300,19 +313,19 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
           </div>
         </div>
 
-        <div className="relative min-h-[600px] border border-gray-200 rounded-lg bg-gray-50">
+        <div className="relative w-full h-[600px] border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
           {/* Section Labels */}
-          <div className="absolute top-4 left-4 bg-blue-100 px-2 py-1 rounded text-xs font-medium">
+          <div className="absolute top-4 left-4 bg-blue-100 px-2 py-1 rounded text-xs font-medium z-10">
             Indoor
           </div>
-          <div className="absolute top-[380px] left-4 bg-green-100 px-2 py-1 rounded text-xs font-medium">
+          <div className="absolute top-[380px] left-4 bg-green-100 px-2 py-1 rounded text-xs font-medium z-10">
             Outdoor
           </div>
-          <div className="absolute top-4 right-4 bg-yellow-100 px-2 py-1 rounded text-xs font-medium">
+          <div className="absolute top-4 right-4 bg-yellow-100 px-2 py-1 rounded text-xs font-medium z-10">
             Bar
           </div>
 
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
             {renderTableConnections()}
           </svg>
 
