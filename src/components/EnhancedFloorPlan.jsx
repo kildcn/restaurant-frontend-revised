@@ -1,6 +1,6 @@
 // src/components/EnhancedFloorPlan.jsx
 import React, { useState, useEffect } from 'react';
-import { Clock, User, Mail, Phone, AlertCircle, Info, Edit3, Plus, Users, Table, ChefHat, Wine } from 'lucide-react';
+import { Clock, User, AlertCircle, Info, Edit3, Users, ChefHat, Umbrella, Table as TableIcon, Check } from 'lucide-react'; // Assure-toi que Check est importé
 import apiService from '../services/api';
 import moment from 'moment';
 
@@ -11,7 +11,18 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
   const [isLoading, setIsLoading] = useState(true);
   const [hoveredBooking, setHoveredBooking] = useState(null);
   const [dragOverTable, setDragOverTable] = useState(null);
-  const [viewMode, setViewMode] = useState('realistic'); // 'realistic' or 'grid'
+  const [bookingColors, setBookingColors] = useState({});
+
+  const getBookingColor = (bookingId) => {
+    if (!bookingId) return null;
+    if (bookingColors[bookingId]) {
+      return bookingColors[bookingId];
+    }
+    // Simple function to generate a somewhat unique color
+    const color = `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+    setBookingColors(prevColors => ({ ...prevColors, [bookingId]: color }));
+    return color;
+  };
 
   useEffect(() => {
     fetchTables();
@@ -32,89 +43,105 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
     }
   };
 
-  // Define restaurant layout sections
+  // Define restaurant layout sections - ONLY main dining and outdoor
   const restaurantLayout = {
-    dimensions: { width: 1200, height: 800 },
+    dimensions: { width: 1000, height: 650 },
     sections: {
       mainDining: {
-        x: 100,
-        y: 100,
-        width: 700,
-        height: 400,
+        x: 50,
+        y: 30,
+        width: 900,
+        height: 280,
         background: '#f8fafc',
-        border: '#e2e8f0'
-      },
-      bar: {
-        x: 850,
-        y: 100,
-        width: 250,
-        height: 200,
-        background: '#f1f5f9',
-        border: '#cbd5e1'
+        label: 'Main Dining Room'
       },
       outdoor: {
-        x: 100,
-        y: 550,
-        width: 700,
-        height: 200,
-        background: '#ecfdf5',
-        border: '#a7f3d0'
-      },
-      kitchen: {
-        x: 850,
+        x: 50,
         y: 350,
-        width: 250,
-        height: 150,
-        background: '#fef2f2',
-        border: '#fecaca'
+        width: 900,
+        height: 270,
+        background: '#ecfdf5',
+        label: 'Outdoor Terrace'
       }
     }
   };
 
-  // Generate table positions based on layout
+  // Intelligent table positioning system with proper spacing
   const getTablePosition = (table) => {
-    const positions = {
+    const basePositions = {
       indoor: {
-        1: { x: 150, y: 150, shape: 'circle', size: 70 },
-        2: { x: 250, y: 150, shape: 'circle', size: 70 },
-        3: { x: 350, y: 150, shape: 'circle', size: 70 },
-        4: { x: 450, y: 150, shape: 'circle', size: 70 },
-        5: { x: 550, y: 150, shape: 'circle', size: 70 },
-        6: { x: 150, y: 250, shape: 'rectangle', width: 90, height: 60 },
-        7: { x: 300, y: 250, shape: 'rectangle', width: 90, height: 60 },
-        8: { x: 450, y: 250, shape: 'rectangle', width: 90, height: 60 },
-        9: { x: 600, y: 250, shape: 'rectangle', width: 90, height: 60 },
-        10: { x: 150, y: 350, shape: 'circle', size: 90 },
-        11: { x: 300, y: 350, shape: 'circle', size: 90 },
-        12: { x: 450, y: 350, shape: 'circle', size: 90 },
-        13: { x: 600, y: 350, shape: 'circle', size: 90 },
-      },
-      bar: {
-        100: { x: 900, y: 150, shape: 'circle', size: 50 },
-        101: { x: 970, y: 150, shape: 'circle', size: 50 },
-        102: { x: 1040, y: 150, shape: 'circle', size: 50 },
+        2: { shape: 'circle', size: 60 },
+        4: { shape: 'circle', size: 70 },
+        6: { shape: 'rectangle', width: 120, height: 60 },
+        8: { shape: 'rectangle', width: 160, height: 80 }
       },
       outdoor: {
-        50: { x: 150, y: 600, shape: 'rectangle', width: 80, height: 60 },
-        51: { x: 250, y: 600, shape: 'rectangle', width: 80, height: 60 },
-        52: { x: 350, y: 600, shape: 'rectangle', width: 80, height: 60 },
-        53: { x: 450, y: 600, shape: 'rectangle', width: 80, height: 60 },
-        54: { x: 550, y: 600, shape: 'rectangle', width: 80, height: 60 },
-        55: { x: 650, y: 600, shape: 'rectangle', width: 80, height: 60 },
-        56: { x: 150, y: 680, shape: 'rectangle', width: 80, height: 60 },
-        57: { x: 250, y: 680, shape: 'rectangle', width: 80, height: 60 },
-        58: { x: 350, y: 680, shape: 'rectangle', width: 80, height: 60 },
-      },
-      window: {
-        20: { x: 700, y: 150, shape: 'circle', size: 60 },
-        21: { x: 700, y: 220, shape: 'circle', size: 60 },
-        22: { x: 700, y: 290, shape: 'circle', size: 60 },
-        23: { x: 700, y: 360, shape: 'circle', size: 60 },
+        2: { shape: 'circle', size: 55 },
+        4: { shape: 'circle', size: 65 },
+        6: { shape: 'rectangle', width: 110, height: 55 }
       }
     };
 
-    const section = table.section || 'indoor';
-    return positions[section]?.[table.tableNumber] || { x: 100, y: 100, shape: 'circle', size: 60 };
+    const section = table.section || 'indoor'; // Determine section ('indoor' or 'outdoor')
+    const capacity = parseInt(table.capacity, 10) || 2;
+    const sectionBasePositions = basePositions[section];
+
+    // Default if capacity/section unknown
+    if (!sectionBasePositions || !sectionBasePositions[capacity]) {
+      console.warn(`No base position for ${capacity}-seat table in "${section}". Using default.`);
+      // Use a reasonable default, maybe based on section
+      const defaultPos = section === 'outdoor' ? basePositions.outdoor[2] : basePositions.indoor[2];
+      // Ensure defaultPos exists, provide ultimate fallback if needed
+      const fallbackPos = { shape: 'circle', size: 50 };
+      return { x: 0, y: 0, ...(defaultPos || fallbackPos) }; // Return default shape/size
+    }
+
+    const base = sectionBasePositions[capacity];
+    const spacingX = section === 'indoor' ? 140 : 130;
+    const spacingY = 100; // Increased vertical spacing slightly
+    // Determine the correct section object from restaurantLayout
+    const layoutSection = restaurantLayout.sections[section === 'indoor' ? 'mainDining' : 'outdoor'];
+
+    // Check if layoutSection exists to prevent errors
+    if (!layoutSection) {
+        console.error(`Layout section not found for section type: ${section}`);
+        return { ...base, x: 0, y: 0 }; // Return base shape/size at origin
+    }
+
+    const startX = layoutSection.x + 80;
+    // Adjust startY based on capacity for better vertical spacing within rows
+    const startY = layoutSection.y + 70; // Consolidated base Y start
+
+    // --- THIS LOGIC NOW APPLIES TO ALL TABLES ---
+
+    // Table number parsing (handle prefixes like 'A' or 'O')
+    const tablePrefix = table.tableNumber?.match(/^[A-Za-z]+/)?.[0] || '';
+    const tableNumPart = table.tableNumber?.replace(tablePrefix, '');
+    let index = parseInt(tableNumPart, 10);
+
+    // If parsing failed or tableNumber is just a number string
+    if (isNaN(index)) {
+        index = parseInt(table.tableNumber, 10) || 1; // Fallback to direct parse or 1
+        if (isNaN(index)) index = 1; // Ultimate fallback if tableNumber is non-numeric
+    }
+
+    // Determine grid position based on index (adjust columns per row if needed)
+    const columnsPerRow = 5; // How many tables fit horizontally in a row
+    const rowIndex = Math.floor((index - 1) / columnsPerRow);
+    const colIndex = (index - 1) % columnsPerRow;
+
+    // Calculate final position
+    const calculatedX = startX + colIndex * spacingX;
+
+    // Calculate Y position considering row and vertical spacing
+    // Add extra space for larger tables (rectangles usually taller than circles)
+    const extraYOffsetForLargeTable = base.shape === 'rectangle' ? 15 : 0;
+    const calculatedY = startY + rowIndex * spacingY + extraYOffsetForLargeTable;
+
+    // Log the final calculated position for debugging
+    // console.log(`Table ${table.tableNumber} (Final Position): Section=${section}, Index=${index}, Row=${rowIndex}, Col=${colIndex}, X=${calculatedX}, Y=${calculatedY}`);
+
+    return { ...base, x: calculatedX, y: calculatedY };
   };
 
   const getTableStatus = (table) => {
@@ -128,7 +155,7 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
       moment(b.timeSlot.end).isAfter(selectedDateTime)
     );
 
-    if (!booking) return { status: 'available', color: '#E5E7EB' };
+    if (!booking) return { status: 'available', color: '#E5E7EB', booking: null, isGrouped: false };
 
     return {
       status: booking.status,
@@ -140,10 +167,10 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
 
   const getBookingStatusColor = (status) => {
     const colors = {
-      confirmed: '#3B82F6',
-      seated: '#10B981',
+      confirmed: '#22C55E', // Plus vif
+      seated: '#16A34A', // Plus vif
       completed: '#8B5CF6',
-      pending: '#F59E0B',
+      pending: '#FACC15', // Plus vif
       cancelled: '#EF4444',
       'no-show': '#6B7280'
     };
@@ -188,8 +215,23 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
     }
 
     try {
+      // Auto-group tables for larger parties
+      let tablesToAssign = [];
+
+      if (draggedBooking.partySize <= table.capacity) {
+        tablesToAssign = [table._id];
+      } else {
+        // Find adjacent tables to group
+        const selectedTables = findAdjacentTables(table, draggedBooking.partySize);
+        if (selectedTables.length === 0) {
+          alert('Cannot find enough adjacent tables for this party size.');
+          return;
+        }
+        tablesToAssign = selectedTables.map(t => t._id);
+      }
+
       const response = await apiService.bookings.updateBooking(draggedBooking._id, {
-        tables: [table._id]
+        tables: tablesToAssign
       });
 
       if (response.success) {
@@ -201,6 +243,54 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
     }
 
     setDraggedBooking(null);
+  };
+
+  // Find adjacent tables for grouping
+  const findAdjacentTables = (initialTable, requiredCapacity) => {
+    const availableTables = tables.filter(t =>
+      t.section === initialTable.section &&
+      !getTableStatus(t).booking
+    );
+
+    let selectedTables = [initialTable];
+    let totalCapacity = initialTable.capacity;
+
+    // Sort by distance to initial table
+    availableTables.sort((a, b) => {
+      const posA = getTablePosition(a);
+      const posB = getTablePosition(b);
+      const distA = Math.sqrt(
+        Math.pow(posA.x - getTablePosition(initialTable).x, 2) +
+        Math.pow(posA.y - getTablePosition(initialTable).y, 2)
+      );
+      const distB = Math.sqrt(
+        Math.pow(posB.x - getTablePosition(initialTable).x, 2) +
+        Math.pow(posB.y - getTablePosition(initialTable).y, 2)
+      );
+      return distA - distB;
+    });
+
+    // Add adjacent tables until we have enough capacity
+    for (const table of availableTables) {
+      if (totalCapacity >= requiredCapacity) break;
+
+      const distance = getDistanceBetweenTables(initialTable, table);
+      if (distance < 150) { // Only group truly adjacent tables
+        selectedTables.push(table);
+        totalCapacity += table.capacity;
+      }
+    }
+
+    return totalCapacity >= requiredCapacity ? selectedTables : [];
+  };
+
+  const getDistanceBetweenTables = (table1, table2) => {
+    const pos1 = getTablePosition(table1);
+    const pos2 = getTablePosition(table2);
+    return Math.sqrt(
+      Math.pow(pos2.x - pos1.x, 2) +
+      Math.pow(pos2.y - pos1.y, 2)
+    );
   };
 
   const getUnassignedBookings = () => {
@@ -224,110 +314,146 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
 
     return (
       <>
-        {/* Kitchen */}
-        <rect
-          x={sections.kitchen.x}
-          y={sections.kitchen.y}
-          width={sections.kitchen.width}
-          height={sections.kitchen.height}
-          fill={sections.kitchen.background}
-          stroke={sections.kitchen.border}
-          strokeWidth="2"
-        />
-        <g transform={`translate(${sections.kitchen.x + sections.kitchen.width/2}, ${sections.kitchen.y + sections.kitchen.height/2})`}>
-          <ChefHat size={32} className="text-red-400" />
-          <text y="25" textAnchor="middle" className="text-sm font-medium">Kitchen</text>
+        {/* Main Dining Room Header */}
+        <g transform={`translate(${sections.mainDining.x + 10}, ${sections.mainDining.y - 10})`}>
+          <TableIcon size={24} className="text-blue-600 inline-block mr-2" />
+          <text className="text-lg font-medium fill-gray-800">{sections.mainDining.label}</text>
         </g>
 
-        {/* Bar */}
-        <rect
-          x={sections.bar.x}
-          y={sections.bar.y}
-          width={sections.bar.width}
-          height={sections.bar.height}
-          fill={sections.bar.background}
-          stroke={sections.bar.border}
-          strokeWidth="2"
-        />
-        <g transform={`translate(${sections.bar.x + sections.bar.width/2}, ${sections.bar.y + 20})`}>
-          <Wine size={24} className="text-blue-400" />
-          <text y="25" textAnchor="middle" className="text-sm font-medium">Bar</text>
-        </g>
-
-        {/* Main Dining */}
+        {/* Main Dining Room */}
         <rect
           x={sections.mainDining.x}
           y={sections.mainDining.y}
           width={sections.mainDining.width}
           height={sections.mainDining.height}
           fill={sections.mainDining.background}
-          stroke={sections.mainDining.border}
+          stroke="#e2e8f0"
           strokeWidth="2"
+          rx="8"
         />
-        <text x={sections.mainDining.x + 10} y={sections.mainDining.y + 20} className="text-sm font-medium">Main Dining</text>
 
-        {/* Outdoor */}
+        {/* Window decoration for dining room */}
+        <rect
+          x={sections.mainDining.x}
+          y={sections.mainDining.y}
+          width={sections.mainDining.width}
+          height="8"
+          fill="#bfdbfe"
+          opacity="0.5"
+        />
+
+        {/* Visual separators for table sections */}
+        <line
+          x1={sections.mainDining.x + 20}
+          y1={sections.mainDining.y + 140}
+          x2={sections.mainDining.x + sections.mainDining.width - 20}
+          y2={sections.mainDining.y + 140}
+          stroke="#e2e8f0"
+          strokeWidth="1"
+          strokeDasharray="5,5"
+        />
+        <line
+          x1={sections.mainDining.x + 20}
+          y1={sections.mainDining.y + 220}
+          x2={sections.mainDining.x + sections.mainDining.width - 20}
+          y2={sections.mainDining.y + 220}
+          stroke="#e2e8f0"
+          strokeWidth="1"
+          strokeDasharray="5,5"
+        />
+
+        {/* Outdoor Terrace Header */}
+        <g transform={`translate(${sections.outdoor.x + 10}, ${sections.outdoor.y - 10})`}>
+          <Umbrella size={24} className="text-green-600 inline-block mr-2" />
+          <text className="text-lg font-medium fill-gray-800">{sections.outdoor.label}</text>
+        </g>
+
+        {/* Outdoor terrace central walkway */}
+        <line
+          x1={sections.outdoor.x + sections.outdoor.width / 2}
+          y1={sections.outdoor.y + 20}
+          x2={sections.outdoor.x + sections.outdoor.width / 2}
+          y2={sections.outdoor.y + sections.outdoor.height - 20}
+          stroke="#a7f3d0"
+          strokeWidth="2"
+          strokeDasharray="10,5"
+          opacity="0.5"
+        />
+
+        {/* Outdoor Terrace */}
         <rect
           x={sections.outdoor.x}
           y={sections.outdoor.y}
           width={sections.outdoor.width}
           height={sections.outdoor.height}
           fill={sections.outdoor.background}
-          stroke={sections.outdoor.border}
+          stroke="#a7f3d0"
           strokeWidth="2"
+          rx="8"
         />
-        <text x={sections.outdoor.x + 10} y={sections.outdoor.y + 20} className="text-sm font-medium">Outdoor Terrace</text>
 
-        {/* Window decoration */}
-        <line
-          x1={sections.mainDining.x + sections.mainDining.width}
-          y1={sections.mainDining.y}
-          x2={sections.mainDining.x + sections.mainDining.width}
-          y2={sections.mainDining.y + sections.mainDining.height}
-          stroke="#9CA3AF"
-          strokeWidth="8"
+        {/* Outdoor decoration */}
+        <defs>
+          <pattern id="outdoorPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1" fill="#a7f3d0" opacity="0.3" />
+          </pattern>
+        </defs>
+        <rect
+          x={sections.outdoor.x}
+          y={sections.outdoor.y}
+          width={sections.outdoor.width}
+          height={sections.outdoor.height}
+          fill="url(#outdoorPattern)"
+          opacity="0.8"
         />
-        <text
-          x={sections.mainDining.x + sections.mainDining.width + 20}
-          y={sections.mainDining.y + sections.mainDining.height/2}
-          transform={`rotate(-90 ${sections.mainDining.x + sections.mainDining.width + 20} ${sections.mainDining.y + sections.mainDining.height/2})`}
-          className="text-xs text-gray-500"
-        >
-          WINDOW
-        </text>
       </>
     );
   };
 
   const renderTable = (table) => {
     const position = getTablePosition(table);
-    const { status, color, booking } = getTableStatus(table);
+    const { status, color: statusColor, booking } = getTableStatus(table);
     const isSelected = selectedTable?._id === table._id;
     const isDragOver = dragOverTable === table._id;
+    const bookingColor = booking ? getBookingColor(booking._id) : null;
+    const displayColor = bookingColor || statusColor;
+
+    let displayLabel = table.tableNumber || '';
+    let hoverTitle = `${displayLabel} - ${table.capacity} seats`;
+    if (booking) {
+      hoverTitle += ` - ${booking.partySize} guests - Status: ${booking.status}`;
+    }
+
+    console.log(`Table ${table.tableNumber} position: x=${position.x}, y=${position.y}`);
 
     return (
       <g
         key={table._id}
         transform={`translate(${position.x}, ${position.y})`}
         className="cursor-pointer"
-        onClick={() => handleTableClick(table)}
+        onClick={() => handleTableClick(table)} // Click to open table actions
         onDragOver={(e) => handleTableDragOver(table, e)}
         onDragLeave={() => setDragOverTable(null)}
         onDrop={(e) => handleTableDrop(table, e)}
         onMouseEnter={() => booking && setHoveredBooking(booking._id)}
         onMouseLeave={() => setHoveredBooking(null)}
       >
+        <title>{hoverTitle}</title> {/* Tooltip on hover */}
         {position.shape === 'circle' ? (
           <>
             <circle
               cx="0"
               cy="0"
               r={position.size / 2}
-              fill={status === 'available' ? '#ffffff' : `${color}20`}
-              stroke={status === 'available' ? '#9CA3AF' : color}
+              fill={status === 'available' ? '#ffffff' : `${displayColor}20`}
+              stroke={status === 'available' ? '#9CA3AF' : displayColor}
               strokeWidth={isSelected ? 3 : 2}
               className={`transition-all ${isDragOver ? 'stroke-primary stroke-[3]' : ''}`}
             />
+            {/* Icône de statut */}
+            {booking && status === 'confirmed' && <Check size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-green-600" />}
+            {booking && status === 'seated' && <User size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-green-600" />}
+            {booking && status === 'pending' && <Clock size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-600" />}
             {/* Chairs for circle tables */}
             {[...Array(table.capacity)].map((_, i) => {
               const angle = (i * 360) / table.capacity;
@@ -354,12 +480,16 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
               y={-position.height / 2}
               width={position.width}
               height={position.height}
-              fill={status === 'available' ? '#ffffff' : `${color}20`}
-              stroke={status === 'available' ? '#9CA3AF' : color}
+              fill={status === 'available' ? '#ffffff' : `${displayColor}20`}
+              stroke={status === 'available' ? '#9CA3AF' : displayColor}
               strokeWidth={isSelected ? 3 : 2}
               rx="6"
               className={`transition-all ${isDragOver ? 'stroke-primary stroke-[3]' : ''}`}
             />
+            {/* Icône de statut */}
+            {booking && status === 'confirmed' && <Check size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-green-600" />}
+            {booking && status === 'seated' && <User size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-green-600" />}
+            {booking && status === 'pending' && <Clock size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-600" />}
             {/* Chairs for rectangular tables */}
             {table.capacity <= 4 && [
               { x: 0, y: -position.height/2 - 10 }, // top
@@ -382,18 +512,18 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
           </>
         )}
 
-        {/* Table number */}
+        {/* Table number with indoor/outdoor prefix */}
         <text
           y="-5"
           textAnchor="middle"
           className="text-xs font-bold fill-gray-700"
         >
-          {table.tableNumber}
+          {displayLabel}
         </text>
 
         {/* Capacity info */}
         <text
-          y="10"
+          y={booking ? '10' : '15'}
           textAnchor="middle"
           className="text-[10px] fill-gray-500"
         >
@@ -406,24 +536,61 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
             y="22"
             textAnchor="middle"
             className="text-[10px] font-medium"
-            fill={color}
+            fill={displayColor}
           >
             {booking.partySize} guests
           </text>
         )}
-
-        {/* Customer name if hovered */}
-        {booking && hoveredBooking === booking._id && (
-          <text
-            y="34"
-            textAnchor="middle"
-            className="text-[10px] font-medium"
-          >
-            {booking.customer.name}
-          </text>
-        )}
       </g>
     );
+  };
+
+  // Render connections between grouped tables
+  const renderTableConnections = () => {
+    const connections = [];
+
+    bookings.forEach(booking => {
+      if (booking.tables && booking.tables.length > 1 && booking.status !== 'cancelled' && booking.status !== 'no-show') {
+        const bookingTables = tables.filter(table =>
+          booking.tables.some(t => t._id === table._id)
+        );
+        const bookingColor = getBookingColor(booking._id); // Get the unique booking color
+
+        // Create connections between adjacent tables
+        for (let i = 0; i < bookingTables.length - 1; i++) {
+          for (let j = i + 1; j < bookingTables.length; j++) {
+            const table1 = bookingTables[i];
+            const table2 = bookingTables[j];
+            const pos1 = getTablePosition(table1);
+            const pos2 = getTablePosition(table2);
+
+            const distance = Math.sqrt(
+              Math.pow(pos2.x - pos1.x, 2) +
+              Math.pow(pos2.y - pos1.y, 2)
+            );
+
+            // Only connect tables that are close to each other
+            if (distance < 150) {
+              connections.push(
+                <line
+                  key={`${booking._id}-${i}-${j}`}
+                  x1={pos1.x}
+                  y1={pos1.y}
+                  x2={pos2.x}
+                  y2={pos2.y}
+                  stroke={bookingColor} // Use the unique booking color
+                  strokeWidth="3"
+                  strokeDasharray="5,5"
+                  opacity={hoveredBooking === booking._id ? 1 : 0.5}
+                />
+              );
+            }
+          }
+        }
+      }
+    });
+
+    return connections;
   };
 
   if (isLoading) {
@@ -435,20 +602,18 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="flex flex-col lg:flex-row gap-6">
       {/* Floor Plan */}
-      <div className="lg:col-span-3 bg-white rounded-lg shadow p-6">
+      <div className="lg:flex-1 bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Floor Plan</h3>
+          <h3 className="text-lg font-medium">Restaurant Floor Plan</h3>
           <div className="flex items-center space-x-4">
-            <select
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
-              className="text-sm border-gray-300 rounded-md"
-            >
-              <option value="realistic">Realistic View</option>
-              <option value="grid">Grid View</option>
-            </select>
+            <div className="text-sm text-gray-500">
+              <span className="font-medium">A1-A15:</span> Main Dining
+            </div>
+            <div className="text-sm text-gray-500">
+              <span className="font-medium">O1-O11:</span> Outdoor Terrace
+            </div>
             <div className="flex items-center text-sm text-gray-500">
               <Clock size={16} className="mr-1" />
               {moment(selectedTime, 'HH:mm').format('h:mm A')}
@@ -459,11 +624,14 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
         <div className="relative border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
           <svg
             viewBox={`0 0 ${restaurantLayout.dimensions.width} ${restaurantLayout.dimensions.height}`}
-            className="w-full h-auto"
+            className="w-full h-auto min-h-[500px]"
             style={{ aspectRatio: `${restaurantLayout.dimensions.width}/${restaurantLayout.dimensions.height}` }}
           >
             {/* Restaurant Elements */}
             {renderRestaurantElements()}
+
+            {/* Table Connections */}
+            {renderTableConnections()}
 
             {/* Tables */}
             {tables.map(renderTable)}
@@ -492,7 +660,7 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
       </div>
 
       {/* Side Panel */}
-      <div className="lg:col-span-1 space-y-6">
+      <div className="lg:w-80 space-y-6">
         {/* Unassigned Bookings */}
         <div className="bg-white rounded-lg shadow p-4">
           <h4 className="font-medium mb-3">Unassigned Bookings</h4>
@@ -538,13 +706,18 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
         {/* Selected Table Details */}
         {selectedTable && (
           <div className="bg-white rounded-lg shadow p-4">
-            <h4 className="font-medium mb-3">Table {selectedTable.tableNumber}</h4>
+            <h4 className="font-medium mb-3">
+              Table {parseInt(selectedTable.tableNumber) < 50 ?
+                `A${selectedTable.tableNumber}` :
+                `O${parseInt(selectedTable.tableNumber) - 49}`
+              }
+            </h4>
             <div className="space-y-3">
               <div className="text-sm">
                 <span className="text-gray-500">Capacity:</span> {selectedTable.capacity} guests
               </div>
               <div className="text-sm">
-                <span className="text-gray-500">Section:</span> {selectedTable.section || 'Indoor'}
+                <span className="text-gray-500">Location:</span> {selectedTable.section === 'outdoor' ? 'Outdoor Terrace' : 'Main Dining'}
               </div>
 
               {selectedTable.section === 'outdoor' && (
@@ -605,19 +778,17 @@ const EnhancedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus, 
           <h4 className="font-medium mb-3">Current Status</h4>
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Total Tables:</span>
-              <span className="font-medium">{tables.length}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Occupied Tables:</span>
+              <span className="text-gray-500">Indoor Tables:</span>
               <span className="font-medium">
-                {tables.filter(table => getTableStatus(table).booking).length}
+                {tables.filter(t => (!t.section || t.section === 'indoor') && !getTableStatus(t).booking).length}/
+                {tables.filter(t => !t.section || t.section === 'indoor').length}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Available Tables:</span>
+              <span className="text-gray-500">Outdoor Tables:</span>
               <span className="font-medium">
-                {tables.filter(table => !getTableStatus(table).booking).length}
+                {tables.filter(t => t.section === 'outdoor' && !getTableStatus(t).booking).length}/
+                {tables.filter(t => t.section === 'outdoor').length}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
