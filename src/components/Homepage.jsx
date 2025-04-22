@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
-import BookingForm from './BookingForm';
 import { Calendar, MapPin, Phone, Mail, Clock, Users, Utensils, Wine, Star } from 'lucide-react';
 
-const Homepage = ({ restaurantInfo }) => {
-  const [showBooking, setShowBooking] = useState(false);
-
-  const handleBookingClick = () => {
-    setShowBooking(true);
-    setTimeout(() => {
-      document.getElementById('booking-section')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
+const Homepage = ({ restaurantInfo, onBookingClick }) => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
@@ -23,7 +13,7 @@ const Homepage = ({ restaurantInfo }) => {
     <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display">L'Eustache</h1>
     <p className="text-xl mb-6">A casual French bistro with organic, local and seasonal cuisine</p>
     <button
-      onClick={handleBookingClick}
+      onClick={onBookingClick}
       className="px-6 py-3 rounded-md text-white font-medium text-lg shadow-lg bg-primary hover:bg-primary-dark transition-colors"
     >
       Reserve a Table
@@ -177,31 +167,19 @@ const Homepage = ({ restaurantInfo }) => {
         </div>
       </div>
 
-      {/* Booking Section */}
-      {showBooking && (
-        <div id="booking-section" className="py-16 px-4 bg-white">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-8 text-primary font-display">Make a Reservation</h2>
-            <BookingForm restaurantInfo={restaurantInfo} />
-          </div>
-        </div>
-      )}
-
       {/* Call to Action */}
-      {!showBooking && (
-        <div className="bg-primary text-white py-16 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4 font-display">Ready to Experience L'Eustache?</h2>
-            <p className="text-xl mb-8">Reserve your table now and enjoy our seasonal French cuisine</p>
-            <button
-              onClick={handleBookingClick}
-              className="px-8 py-3 bg-white text-primary rounded-md font-medium text-lg hover:bg-gray-100 transition-colors"
-            >
-              Book a Table
-            </button>
-          </div>
+      <div className="bg-primary text-white py-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-4 font-display">Ready to Experience L'Eustache?</h2>
+          <p className="text-xl mb-8">Reserve your table now and enjoy our seasonal French cuisine</p>
+          <button
+            onClick={onBookingClick}
+            className="px-8 py-3 bg-white text-primary rounded-md font-medium text-lg hover:bg-gray-100 transition-colors"
+          >
+            Book a Table
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-6 px-4 mt-auto">

@@ -13,6 +13,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
   const [dragOverTable, setDragOverTable] = useState(null);
 
   useEffect(() => {
+    console.log('SimplifiedFloorPlan mounted with:', { date, selectedTime, bookings });
     fetchTables();
   }, []);
 
@@ -20,6 +21,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
     setIsLoading(true);
     try {
       const response = await apiService.tables.getTables();
+      console.log('Tables API response:', response);
       if (response.success) {
         const positionedTables = assignTablePositions(response.data || []);
         setTables(positionedTables);
@@ -273,6 +275,8 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
 
     return connections;
   };
+
+  console.log('Rendering SimplifiedFloorPlan', { isLoading, tables: tables.length });
 
   if (isLoading) {
     return (

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Users, LogOut, Settings, Calendar, AlertCircle, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight, PlusCircle, Edit3 } from 'lucide-react';
 import SimplifiedFloorPlan from './SimplifiedFloorPlan';
 import SimplifiedSettings from './SimplifiedSettings';
-import BookingModal from './BookingModal';
+import UnifiedBookingForm from './UnifiedBookingForm';
 import apiService from '../services/api';
 import moment from 'moment';
 
@@ -24,6 +24,11 @@ const AdminDashboard = ({ onLogout }) => {
   });
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [editingBooking, setEditingBooking] = useState(null);
+
+  // Debug active tab
+  useEffect(() => {
+    console.log('Active tab changed to:', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     fetchRestaurantInfo();
@@ -181,14 +186,20 @@ const AdminDashboard = ({ onLogout }) => {
     try {
       if (editingBooking) {
         // Update existing booking
-        const response = await apiService.bookings.updateBooking(editingBooking._id, bookingData);
+        const response = await apiService.bookings.updateBooking(editingBooking._id, {
+          ...bookingData,
+          isAdminBooking: true  // Ensure this is set for admin updates
+        });
         if (response.success) {
           fetchDashboardData();
           setShowBookingModal(false);
         }
       } else {
         // Create new booking
-        const response = await apiService.bookings.createBooking(bookingData);
+        const response = await apiService.bookings.createBooking({
+          ...bookingData,
+          isAdminBooking: true  // Ensure this is set for admin creation
+        });
         if (response.success) {
           fetchDashboardData();
           setShowBookingModal(false);
@@ -295,16 +306,6 @@ const AdminDashboard = ({ onLogout }) => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Today
-            </button>
-            <button
-              onClick={() => setActiveTab('floorplan')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'floorplan'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
               Floor Plan
             </button>
             <button
@@ -323,6 +324,9 @@ const AdminDashboard = ({ onLogout }) => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Debugging */}
+        <div className="text-xs text-gray-500 mb-2">Current Tab: {activeTab}</div>
+
         {/* Time Selector - Always visible for Today and Floor Plan tabs */}
         {(activeTab === 'today' || activeTab === 'floorplan') && (
           <div className="mb-6 bg-white rounded-lg shadow p-4">
@@ -487,6 +491,14 @@ const AdminDashboard = ({ onLogout }) => {
                           {booking.tables && booking.tables.length > 0 && (
                             <div className="text-sm text-gray-500">
                               Tables: {booking.tables.map(t => t.tableNumber).join(', ')}
+                              <span className="ml-2 text-xs italic">
+                                ({booking.tables.map(t => t.section || 'indoor').join(', ')})
+                              </span>
+                            </div>
+                          )}
+                          {!booking.isAdminBooking && booking.tables?.some(t => t.section === 'outdoor') && (
+                            <div className="text-xs text-red-600 font-medium mt-1">
+                              Customer booking assigned to outdoor table (should be indoor only)
                             </div>
                           )}
                         </div>
@@ -527,30 +539,36 @@ const AdminDashboard = ({ onLogout }) => {
           </div>
         )}
 
+        {/* Floor Plan Tab */}
         {activeTab === 'floorplan' && (
-          <SimplifiedFloorPlan
-            date={selectedDate}
-            selectedTime={selectedTime}
-            bookings={bookings}
-            updateBookingStatus={updateBookingStatus}
-            onEditBooking={handleEditBooking}
-          />
+          <div className="space-y-6">
+            <SimplifiedFloorPlan
+              date={selectedDate}
+              selectedTime={selectedTime}
+              bookings={bookings}
+              updateBookingStatus={updateBookingStatus}
+              onEditBooking={handleEditBooking}
+            />
+          </div>
         )}
 
+        {/* Settings Tab */}
         {activeTab === 'settings' && (
           <SimplifiedSettings />
         )}
       </main>
 
-      {/* Booking Modal */}
+      {/* Booking Modal using UnifiedBookingForm */}
       {showBookingModal && (
-        <BookingModal
+        <UnifiedBookingForm
           booking={editingBooking}
           restaurantInfo={restaurantInfo}
           defaultDate={selectedDate}
           defaultTime={selectedTime}
           onClose={() => setShowBookingModal(false)}
           onSave={handleSaveBooking}
+          isAdmin={true}
+          showAsModal={true}
         />
       )}
     </div>

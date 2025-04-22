@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Homepage from './components/Homepage';
 import AdminDashboard from './components/AdminDashboard';
 import BookingConfirmation from './components/BookingConfirmation';
+import UnifiedBookingForm from './components/UnifiedBookingForm';
 import apiService from './services/api';
 import { Calendar, Info } from 'lucide-react';
 
@@ -15,6 +16,7 @@ const App = () => {
   const [bookingLookupError, setBookingLookupError] = useState('');
   const [bookingData, setBookingData] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
 
   // Lookup booking function
   const lookupBooking = async (reference, email) => {
@@ -182,6 +184,13 @@ const App = () => {
     setCurrentPage(page);
   };
 
+  const handleBookingClick = () => {
+    setShowBookingForm(true);
+    setTimeout(() => {
+      document.getElementById('booking-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   // Booking lookup handler
   const handleBookingLookup = async (e) => {
     e.preventDefault();
@@ -197,11 +206,27 @@ const App = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Homepage
-          onBookingClick={() => {}}
-          onLogin={() => navigateTo('login')}
-          restaurantInfo={restaurantInfo}
-        />;
+        return (
+          <>
+            <Homepage
+              onBookingClick={handleBookingClick}
+              onLogin={() => navigateTo('login')}
+              restaurantInfo={restaurantInfo}
+            />
+            {showBookingForm && (
+              <div id="booking-section" className="py-16 px-4 bg-white">
+                <div className="max-w-4xl mx-auto">
+                  <h2 className="text-3xl font-bold text-center mb-8 text-primary font-display">Make a Reservation</h2>
+                  <UnifiedBookingForm
+                    restaurantInfo={restaurantInfo}
+                    isAdmin={false}
+                    showAsModal={false}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        );
       case 'login':
         return isAuthenticated ?
           <AdminDashboard onLogout={handleLogout} /> :
@@ -236,7 +261,7 @@ const App = () => {
           />
         );
       default:
-        return <Homepage onBookingClick={() => {}} onLogin={() => navigateTo('login')} />;
+        return <Homepage onBookingClick={handleBookingClick} onLogin={() => navigateTo('login')} />;
     }
   };
 
@@ -305,7 +330,7 @@ const App = () => {
   );
 };
 
-// Simple login page
+// Simple login page (unchanged)
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -371,7 +396,7 @@ const LoginPage = ({ onLogin }) => {
   );
 };
 
-// Booking lookup page - enhanced
+// Booking lookup page - enhanced (unchanged)
 const BookingLookupPage = ({ onLookup, reference, setReference, email, setEmail, error }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
