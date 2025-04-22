@@ -1,6 +1,6 @@
 // src/components/BookingModal.jsx
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, User, Mail, Phone, Users as UsersIcon, MessageSquare } from 'lucide-react';
+import { X, Calendar, Clock, User, Mail, Phone, Users as UsersIcon, MessageSquare, AlertCircle } from 'lucide-react';
 import apiService from '../services/api';
 import moment from 'moment';
 
@@ -16,6 +16,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
   const [specialRequests, setSpecialRequests] = useState(booking?.specialRequests || '');
   const [status, setStatus] = useState(booking?.status || 'confirmed');
   const [selectedTables, setSelectedTables] = useState(booking?.tables || []);
+  const [allowOutdoorTables, setAllowOutdoorTables] = useState(false);
 
   const [availableDates, setAvailableDates] = useState([]);
   const [availableTimes, setAvailableTimes] = useState([]);
@@ -50,7 +51,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
     if (date && time && partySize && step >= 3) {
       fetchAvailableTables();
     }
-  }, [date, time, partySize, step]);
+  }, [date, time, partySize, step, allowOutdoorTables]);
 
   const checkAvailableDates = async () => {
     setIsLoading(true);
@@ -77,7 +78,6 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
         }
 
         // For admin, show all open dates regardless of availability
-        // Time slots will be checked separately
         dates.push(dateStr);
       }
 
@@ -114,8 +114,11 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
 
       while (currentSlot.isSameOrBefore(lastBookingTime)) {
         const timeStr = currentSlot.format('HH:mm');
-        // For admin, check availability including outdoor tables if needed
-        const response = await apiService.bookings.checkAvailability(date, timeStr, partySize, { indoorOnly: false });
+
+        // For admin, check availability including outdoor tables
+        const response = await apiService.bookings.checkAvailability(date, timeStr, partySize, {
+          indoorOnly: !allowOutdoorTables
+        });
 
         if (response.success && response.data.available) {
           slots.push(timeStr);
@@ -143,14 +146,21 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
           const availabilityResponse = await apiService.tables.getTableAvailability(date);
           if (availabilityResponse.success) {
             tables = tables.filter(table => {
+              // Filter out tables with insufficient capacity
               if (table.capacity < partySize) {
                 return false;
               }
-              // For admin, show all tables (indoor and outdoor)
+
+              // Filter out outdoor tables if not allowed
+              if (!allowOutdoorTables && table.section === 'outdoor') {
+                return false;
+              }
+
               // If editing, include currently assigned tables
               if (booking && booking.tables?.some(t => t._id === table._id)) {
                 return true;
               }
+
               // Check if table is available at selected time
               return true; // You'd implement more sophisticated availability check here
             });
@@ -186,6 +196,12 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
   };
 
   const handleTableSelection = (table) => {
+    // Prevent selecting outdoor tables unless allowed
+    if (!allowOutdoorTables && table.section === 'outdoor') {
+      setError('Outdoor tables can only be assigned by administrators.');
+      return;
+    }
+
     setSelectedTables(prev => {
       const exists = prev.some(t => t._id === table._id);
       if (exists) {
@@ -194,12 +210,28 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
         return [...prev, table];
       }
     });
+
+    setError(''); // Clear any error
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    // Validate selected tables
+    if (selectedTables.length === 0) {
+      setError('Please select at least one table.');
+      setIsLoading(false);
+      return;
+    }
+
+    const totalCapacity = selectedTables.reduce((sum, table) => sum + table.capacity, 0);
+    if (totalCapacity < partySize) {
+      setError(`Selected tables' total capacity (${totalCapacity}) is less than party size (${partySize}).`);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const bookingData = {
@@ -213,7 +245,8 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
         specialRequests,
         status,
         tables: selectedTables.map(t => t._id),
-        isAdminBooking: true // Mark as admin booking to allow outdoor table assignment
+        isAdminBooking: true,
+        allowOutdoorTables: allowOutdoorTables
       };
 
       await onSave(bookingData);
@@ -267,7 +300,8 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
           {!booking && renderStepIndicator()}
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-800 rounded-md">
+            <div className="mb-4 p-3 bg-red-50 text-red-800 rounded-md flex items-center">
+              <AlertCircle className="w-5 h-5 mr-2" />
               {error}
             </div>
           )}
@@ -355,6 +389,20 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
                 <Clock className="mr-2 text-primary" size={24} />
                 Select Time
               </h3>
+
+              {/* Admin option to allow outdoor tables */}
+              <div className="mb-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={allowOutdoorTables}
+                    onChange={(e) => setAllowOutdoorTables(e.target.checked)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-gray-700">Include outdoor tables</span>
+                </label>
+              </div>
+
               {isLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -421,9 +469,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
               {/* Customer Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Name
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Customer Name</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -437,9 +483,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -453,9 +497,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Phone</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -470,9 +512,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
 
                 {booking && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Party Size
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Party Size</label>
                     <div className="relative">
                       <UsersIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                       <select
@@ -494,9 +534,7 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
 
               {/* Booking Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
@@ -513,32 +551,61 @@ const BookingModal = ({ booking, restaurantInfo, defaultDate, defaultTime, onClo
 
               {/* Table Assignment */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Table Assignment
-                </label>
-                <div className="grid grid-cols-4 gap-2 mt-2">
-                  {availableTables.map(table => (
-                    <div
-                      key={table._id}
-                      onClick={() => handleTableSelection(table)}
-                      className={`p-3 border rounded-md cursor-pointer text-center ${
-                        selectedTables.some(t => t._id === table._id)
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-gray-300 hover:border-primary'
-                      }`}
-                    >
-                      <div className="font-medium">Table {table.tableNumber}</div>
-                      <div className="text-sm opacity-75">{table.capacity} seats</div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Table Assignment
+                  </label>
+                  {/* Admin option to allow outdoor tables */}
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={allowOutdoorTables}
+                      onChange={(e) => setAllowOutdoorTables(e.target.checked)}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-gray-600">Allow outdoor tables</span>
+                  </label>
                 </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                  {availableTables.map(table => {
+                    const isSelected = selectedTables.some(t => t._id === table._id);
+                    const isOutdoor = table.section === 'outdoor';
+                    const isDisabled = isOutdoor && !allowOutdoorTables;
+
+                    return (
+                      <div
+                        key={table._id}
+                        onClick={() => !isDisabled && handleTableSelection(table)}
+                        className={`p-3 border rounded-md cursor-pointer text-center ${
+                          isSelected
+                            ? 'border-primary bg-primary text-white'
+                            : isDisabled
+                            ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                            : 'border-gray-300 hover:border-primary'
+                        }`}
+                      >
+                        <div className="font-medium">Table {table.tableNumber}</div>
+                        <div className="text-sm opacity-75">{table.capacity} seats</div>
+                        <div className={`text-xs mt-1 ${
+                          isSelected ? 'text-white' : 'text-gray-500'
+                        }`}>
+                          {table.section || 'indoor'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {availableTables.length === 0 && (
+                  <div className="text-center text-gray-500 py-4">
+                    No available tables for the selected criteria
+                  </div>
+                )}
               </div>
 
               {/* Special Requests */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Special Requests
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Special Requests</label>
                 <div className="relative">
                   <MessageSquare className="absolute left-3 top-3 text-gray-400" size={18} />
                   <textarea

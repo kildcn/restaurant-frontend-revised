@@ -234,7 +234,9 @@ const BookingForm = () => {
         duration: restaurantInfo?.bookingRules?.maxDuration || 120,
         // Ensure customer bookings are restricted to indoor tables
         isAdminBooking: false,
-        tablePreference: 'indoor'
+        isCustomerBooking: true, // Add explicit flag for customer bookings
+        tablePreference: 'indoor', // Explicitly set to indoor only
+        restrictToIndoor: true // Extra safety flag
       };
 
       const response = await apiService.bookings.createBooking(bookingDetails);

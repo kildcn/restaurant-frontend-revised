@@ -1,4 +1,4 @@
-// src/services/api.js - Enhanced with comprehensive booking functionality
+// src/services/api.js - Enhanced with comprehensive booking functionality and proper table restrictions
 import axios from 'axios';
 
 // Default API configuration
@@ -92,7 +92,8 @@ const apiService = {
           time: requestTime,
           partySize,
           // Ensure customer bookings only check indoor tables
-          indoorOnly: options.indoorOnly ?? true
+          indoorOnly: options.indoorOnly ?? true,
+          restrictToIndoor: true // Extra safety flag
         };
 
         const response = await apiClient.post('/bookings/check-availability', requestData);
@@ -106,11 +107,14 @@ const apiService = {
 
     createBooking: async (bookingData) => {
       try {
-        // Ensure we mark customer bookings appropriately
+        // Enhanced booking data with proper table restrictions
         const enhancedBookingData = {
           ...bookingData,
           isCustomerBooking: !bookingData.isAdminBooking,
-          tablePreference: bookingData.tablePreference || 'indoor'
+          tablePreference: bookingData.tablePreference || 'indoor',
+          restrictToIndoor: !bookingData.isAdminBooking, // Only admins can book outdoor tables
+          allowOutdoorTables: bookingData.isAdminBooking, // Explicitly allow outdoor tables for admin
+          source: bookingData.isAdminBooking ? 'admin' : 'customer' // Track booking source
         };
 
         const response = await apiClient.post('/bookings', enhancedBookingData);
@@ -195,7 +199,14 @@ const apiService = {
 
     updateBooking: async (id, bookingData) => {
       try {
-        const response = await apiClient.put(`/bookings/${id}`, bookingData);
+        // Ensure table restrictions are maintained during updates
+        const enhancedBookingData = {
+          ...bookingData,
+          restrictToIndoor: !bookingData.isAdminBooking,
+          allowOutdoorTables: bookingData.isAdminBooking
+        };
+
+        const response = await apiClient.put(`/bookings/${id}`, enhancedBookingData);
         return { success: true, booking: response.data.data };
       } catch (error) {
         return { success: false, error: getErrorMessage(error) };
