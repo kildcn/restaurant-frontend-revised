@@ -31,7 +31,70 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
   };
 
   const assignTablePositions = (tableData) => {
-    // Group tables by section for better layout
+    // First, group tables by booking to keep them together
+    const tablesWithPositions = new Map();
+    const unassignedTables = new Set(tableData);
+
+    // Find all bookings at selected time
+    const selectedDateTime = moment(date + ' ' + selectedTime);
+    const activeBookings = bookings.filter(booking =>
+      booking.tables?.length > 0 &&
+      moment(booking.timeSlot.start).isSameOrBefore(selectedDateTime) &&
+      moment(booking.timeSlot.end).isAfter(selectedDateTime)
+    );
+
+    // Process grouped tables first
+    let nextPosition = { x: 100, y: 100 };
+    const sectionStartPositions = {
+      indoor: { x: 100, y: 100 },
+      outdoor: { x: 100, y: 400 },
+      bar: { x: 700, y: 100 },
+      window: { x: 20, y: 100 }
+    };
+
+    activeBookings.forEach(booking => {
+      const bookingTables = tableData.filter(table =>
+        booking.tables.some(t => t._id === table._id)
+      );
+
+      if (bookingTables.length > 0) {
+        // Group these tables together
+        const firstTable = bookingTables[0];
+        const section = firstTable.section || 'indoor';
+        nextPosition = sectionStartPositions[section];
+
+        bookingTables.forEach((table, idx) => {
+          const size = table.capacity <= 2 ? 50 : table.capacity <= 4 ? 60 : 70;
+
+          // Arrange tables in a compact row or grid
+          const position = {
+            x: nextPosition.x + (idx % 3) * (size + 10),
+            y: nextPosition.y + Math.floor(idx / 3) * (size + 10),
+            width: size,
+            height: size,
+            shape: table.capacity > 4 ? 'rect' : 'round'
+          };
+
+          tablesWithPositions.set(table._id, {
+            ...table,
+            ...position
+          });
+
+          unassignedTables.delete(table);
+        });
+
+        // Update position for next booking
+        const groupWidth = Math.min(bookingTables.length, 3) * (60 + 10);
+        const groupHeight = Math.ceil(bookingTables.length / 3) * (60 + 10);
+        sectionStartPositions[section] = {
+          x: nextPosition.x + groupWidth + 30,
+          y: nextPosition.y
+        };
+      }
+    });
+
+    // Position remaining unassigned tables
+    const remainingTables = Array.from(unassignedTables);
     const sections = {
       indoor: [],
       outdoor: [],
@@ -40,7 +103,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
       other: []
     };
 
-    tableData.forEach(table => {
+    remainingTables.forEach(table => {
       const section = table.section || 'other';
       if (sections[section]) {
         sections[section].push(table);
@@ -49,65 +112,29 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
       }
     });
 
-    const positionedTables = [];
+    // Process remaining tables by section
+    Object.entries(sections).forEach(([sectionName, sectionTables]) => {
+      if (sectionTables.length === 0) return;
 
-    // Indoor tables
-    sections.indoor.forEach((table, index) => {
-      const row = Math.floor(index / 4);
-      const col = index % 4;
-      const size = table.capacity <= 2 ? 50 : table.capacity <= 4 ? 60 : 70;
-      positionedTables.push({
-        ...table,
-        x: 100 + (col * 140),
-        y: 100 + (row * 120),
-        width: size,
-        height: size,
-        shape: table.capacity > 4 ? 'rect' : 'round'
+      const startPos = sectionStartPositions[sectionName] || sectionStartPositions.indoor;
+      sectionTables.forEach((table, index) => {
+        const size = table.capacity <= 2 ? 50 : table.capacity <= 4 ? 60 : 70;
+        const position = {
+          x: startPos.x + (index % 4) * (size + 20),
+          y: startPos.y + Math.floor(index / 4) * (size + 20),
+          width: size,
+          height: size,
+          shape: table.capacity > 4 ? 'rect' : 'round'
+        };
+
+        tablesWithPositions.set(table._id, {
+          ...table,
+          ...position
+        });
       });
     });
 
-    // Outdoor tables
-    sections.outdoor.forEach((table, index) => {
-      const row = Math.floor(index / 5);
-      const col = index % 5;
-      const size = table.capacity <= 2 ? 50 : table.capacity <= 4 ? 60 : 70;
-      positionedTables.push({
-        ...table,
-        x: 100 + (col * 140),
-        y: 400 + (row * 120),
-        width: size,
-        height: size,
-        shape: table.capacity > 4 ? 'rect' : 'round'
-      });
-    });
-
-    // Bar tables
-    sections.bar.forEach((table, index) => {
-      const size = 45;
-      positionedTables.push({
-        ...table,
-        x: 700 + (index * 60),
-        y: 100,
-        width: size,
-        height: size,
-        shape: 'round'
-      });
-    });
-
-    // Window tables
-    sections.window.forEach((table, index) => {
-      const size = 55;
-      positionedTables.push({
-        ...table,
-        x: 20,
-        y: 100 + (index * 100),
-        width: size,
-        height: size,
-        shape: 'round'
-      });
-    });
-
-    return positionedTables;
+    return Array.from(tablesWithPositions.values());
   };
 
   // Generate unique color for each booking
@@ -210,11 +237,23 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
       if (booking.tables && booking.tables.length > 1) {
         const bookingTables = getBookingTables(booking);
 
-        for (let i = 0; i < bookingTables.length - 1; i++) {
-          for (let j = i + 1; j < bookingTables.length; j++) {
-            const table1 = bookingTables[i];
-            const table2 = bookingTables[j];
+        bookingTables.sort((a, b) => {
+          if (Math.abs(a.y - b.y) < 20) {
+            return a.x - b.x;
+          }
+          return a.y - b.y;
+        });
 
+        for (let i = 0; i < bookingTables.length - 1; i++) {
+          const table1 = bookingTables[i];
+          const table2 = bookingTables[i + 1];
+
+          const distance = Math.sqrt(
+            Math.pow(table2.x - table1.x, 2) +
+            Math.pow(table2.y - table1.y, 2)
+          );
+
+          if (distance < 150) {
             const x1 = table1.x + table1.width / 2;
             const y1 = table1.y + table1.height / 2;
             const x2 = table2.x + table2.width / 2;
@@ -222,7 +261,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
 
             connections.push(
               <line
-                key={`${booking._id}-${i}-${j}`}
+                key={`${booking._id}-${i}`}
                 x1={x1}
                 y1={y1}
                 x2={x2}
@@ -230,7 +269,7 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
                 stroke={getBookingColor(booking._id)}
                 strokeWidth="3"
                 strokeDasharray="5,5"
-                opacity={hoveredBooking === booking._id ? 1 : 0.6}
+                opacity={hoveredBooking === booking._id ? 1 : 0.3}
               />
             );
           }
@@ -292,11 +331,11 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
                   top: `${table.y}px`,
                   width: `${table.width}px`,
                   height: `${table.height}px`,
-                  backgroundColor: status === 'available' ? color : 'transparent',
+                  backgroundColor: status === 'available' ? '#f3f4f6' : 'transparent',
                   borderRadius: table.shape === 'round' ? '50%' : '8px',
-                  boxShadow: isSelected ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none',
-                  border: status !== 'available' ? `3px solid ${color}` : 'none',
-                  background: status !== 'available' ? `linear-gradient(135deg, ${color}33 0%, ${color}66 100%)` : color
+                  boxShadow: isSelected ? '0 2px 8px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: status !== 'available' ? `2px solid ${color}` : '1px solid #e5e7eb',
+                  background: status !== 'available' ? `${color}20` : '#f3f4f6'
                 }}
                 onClick={() => handleTableClick(table)}
                 onDragOver={(e) => e.preventDefault()}
@@ -304,20 +343,19 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
                 onMouseEnter={() => booking && setHoveredBooking(booking._id)}
                 onMouseLeave={() => setHoveredBooking(null)}
               >
-                <div className={`text-center font-bold ${status === 'available' ? 'text-gray-700' : 'text-gray-900'}`}>
-                  <div>{table.tableNumber}</div>
+                <div className={`text-center font-medium ${status === 'available' ? 'text-gray-600' : 'text-gray-900'}`}>
+                  <div className="text-lg">{table.tableNumber}</div>
                   {booking && (
-                    <div className="text-xs mt-1">{booking.partySize}p</div>
+                    <div className="text-xs mt-0.5 font-normal">{booking.partySize} guests</div>
                   )}
                 </div>
 
-                {/* Hover tooltip */}
-                {booking && (
-                  <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 bg-white rounded-lg p-3 shadow-lg text-black text-sm z-50 whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+                {/* Updated hover tooltip */}
+                {booking && hoveredBooking === booking._id && (
+                  <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 bg-white rounded-lg p-2 shadow-md text-black text-sm z-50 whitespace-nowrap">
                     <div className="font-bold">{booking.customer.name}</div>
-                    <div>{booking.partySize} guests</div>
-                    <div>{formatTime(booking.timeSlot.start)} - {formatTime(booking.timeSlot.end)}</div>
-                    <div className="mt-1 text-xs capitalize px-2 py-0.5 rounded" style={{ backgroundColor: color + '33', color: color }}>
+                    <div className="text-xs text-gray-600">{formatTime(booking.timeSlot.start)} - {formatTime(booking.timeSlot.end)}</div>
+                    <div className="mt-0.5 text-xs capitalize px-1.5 py-0.5 rounded" style={{ backgroundColor: color + '20', color: color }}>
                       {booking.status}
                     </div>
                   </div>
@@ -330,15 +368,15 @@ const SimplifiedFloorPlan = ({ date, selectedTime, bookings, updateBookingStatus
         {/* Legend */}
         <div className="mt-4 flex justify-center space-x-6 text-sm">
           <div className="flex items-center">
-            <div className="w-4 h-4 rounded bg-gray-200 mr-1"></div>
+            <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300 mr-2"></div>
             <span>Available</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 rounded" style={{ background: 'linear-gradient(135deg, #3B82F633 0%, #3B82F666 100%)', border: '2px solid #3B82F6' }}></div>
-            <span className="ml-1">Occupied</span>
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3B82F620', border: '2px solid #3B82F6' }}></div>
+            <span className="ml-2">Occupied</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 rounded border-2 border-dashed border-primary mr-1"></div>
+            <div className="w-8 h-0.5 mr-2" style={{ backgroundColor: '#3B82F6', borderTop: '2px dashed #3B82F6' }}></div>
             <span>Grouped Tables</span>
           </div>
         </div>
